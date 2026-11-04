@@ -187,7 +187,7 @@
   .seg button.on{border-color:var(--bronze);color:#ffe9a8}
   .dbox{background:var(--glass2);border:1px solid var(--seal);padding:20px 24px;text-align:center;max-width:420px}
   .dbox h2{margin:0 0 6px;font-family:var(--f-head);color:#ff9a8a}
-  @media (max-width:900px),(max-height:520px){#chat{height:96px;width:46vw}#status{width:236px;padding:5px 6px}#status .por{width:44px;height:54px}#mini{width:120px}#mini canvas{width:108px}#questhud{width:120px;top:170px;font-size:10.5px}#partyhud{top:186px;width:150px}#buffs{top:152px}.slot{width:38px;height:38px}.slot img{width:28px;height:28px}#menu{grid-template-columns:repeat(3,1fr)}#menu button{min-width:54px;padding:4px 5px;font-size:11px}#menu button kbd{display:none}#hotbar{left:max(8px,env(safe-area-inset-left,0px));transform:none;bottom:calc(max(8px,env(safe-area-inset-bottom,0px)) + 88px);gap:3px;padding:3px}#chat{height:80px;width:40vw}#chat input{display:none}.slot{width:34px;height:34px}.slot img{width:26px;height:26px}}
+  @media (max-width:900px),(max-height:520px){#chat{height:96px;width:46vw}#status{width:236px;padding:5px 6px}#status .por{width:44px;height:54px}#mini{width:120px}#mini canvas{width:108px}#questhud{width:120px;top:170px;font-size:10.5px}#partyhud{top:186px;width:150px}#buffs{top:152px}.slot{width:38px;height:38px}.slot img{width:28px;height:28px}#menu{grid-template-columns:repeat(3,1fr)}#menu button{min-width:54px;padding:4px 5px;font-size:11px}#menu button kbd{display:none}#hotbar{left:max(8px,env(safe-area-inset-left,0px));transform:none;bottom:calc(max(8px,env(safe-area-inset-bottom,0px)) + 88px);gap:3px;padding:3px}#chat{height:80px;width:40vw}.slot{width:34px;height:34px}.slot img{width:26px;height:26px}}
   @media (max-height:520px){#chat{height:80px}#questhud{display:none}#partyhud{top:180px}#buffs{top:146px}#sPts{display:none}#status{gap:6px}#status .bar{height:12px}#status .bar span{line-height:11px;font-size:9.5px}#status .exp{font-size:9.5px}#status .money{font-size:11px}#mini .mn,#mini .clock{font-size:10px}#mini .mn b{font-size:10.5px}#partyhud .m{padding:2px 6px;font-size:10.5px}}
   #scare{position:fixed;inset:0;z-index:45;background:#000;display:none;align-items:center;justify-content:center;pointer-events:none}#scare.show{display:flex}#scare canvas{width:min(80vw,80vh);height:auto;image-rendering:pixelated}
   .wmap div[data-pv]{cursor:pointer;transition:border-color .15s}.wmap div[data-pv]:hover{border-color:var(--bronze)}.wmap .pvh{display:block;margin-top:4px;font-size:11px;color:#9ad0ff}
@@ -997,6 +997,7 @@ function spawnMon(mid,x,y,temp,mul){
   const m={id:'m'+(UID++),kind:'mon',mid,def:d,dormant:!!d.ambush,stunT:0,mul:mul||null,x,y,hx:x,hy:y,r:d.r,hp,maxHp:hp,face:1,ang:Math.random()*TAU,target:null,state:'idle',atkT:0,wanderT:rnd(0,3),wx:x,wy:y,anim:{atk:0,hit:0,walk:0,t:Math.random()},dead:false,hitT:0,buffs:{},temp,skillT:rnd(5,8),sumT:20,tele:null};
   W.ents.push(m);return m;
 }
+function monFar(e,P){return Math.abs(e.x-P.x)>2600||Math.abs(e.y-P.y)>2200}
 function party(){return W.ents.filter(e=>e.kind==='pc')}
 function alivePC(){return W.ents.filter(e=>e.kind==='pc'&&!e.dead)}
 function mons(){return W.ents.filter(e=>e.kind==='mon'&&!e.dead&&!e.dormant)}
@@ -1123,7 +1124,7 @@ function step(dt){
     if(e.atkT>0)e.atkT-=dt;if(e.skT>0)e.skT-=dt;
     for(const k in e.cdT)e.cdT[k]=Math.max(0,e.cdT[k]-dt);
     for(const k in e.buffs){e.buffs[k].t-=dt;if(e.buffs[k].t<=0)delete e.buffs[k]}
-    if(e.kind==='mon'){if(!e.target&&!e.dead&&(Math.abs(e.x-P.x)>2600||Math.abs(e.y-P.y)>2200))continue;updMon(e,dt)}else if(e.ctrl==='bot')updBot(e,dt);else updPlayer(e,dt);
+    if(e.kind==='mon'){if(!e.target&&!e.dead&&monFar(e,P))continue;updMon(e,dt)}else if(e.ctrl==='bot')updBot(e,dt);else updPlayer(e,dt);
   }
   // separation
   if(W.timers){for(const t of W.timers)t.t-=dt;const due=W.timers.filter(t=>t.t<=0);W.timers=W.timers.filter(t=>t.t>0);due.forEach(t=>t.fn())}
@@ -3113,7 +3114,7 @@ function pickAt(px,py){
   const hitBox=(x,y,h,w)=>{const a=scr(x,y,0),b=scr(x,y,h);const hw=Math.max(18,w/2);return px>a[0]-hw&&px<a[0]+hw&&py<a[1]+10&&py>b[1]-6?Math.abs(py-(a[1]+b[1])/2)+Math.abs(px-a[0])*.5:-1};
   for(const n of NPCLIST){if(hitBox(n.x,n.y,n.hH||3.4,46)>=0)return {npc:n}}
   let best=null,bd=1e9;
-  for(const e of W.ents){if(e.kind!=='mon'||e.dead)continue;const pp=ppu(e.x,e.y);const d=hitBox(e.x,e.y,e.hH||2,Math.max(44,(e.r||16)/U*pp*2.4));if(d>=0&&d<bd){bd=d;best=e}}
+  for(const e of W.ents){if(e.kind!=='mon'||e.dead)continue;const r3=E3.get(e);if(!r3||!r3.root.visible||r3.seen!==FRAME)continue;if(scr(e.x,e.y,0)[2]>=1)continue;const pp=ppu(e.x,e.y);const d=hitBox(e.x,e.y,e.hH||2,Math.max(44,(e.r||16)/U*pp*2.4));if(d>=0&&d<bd){bd=d;best=e}}
   if(best)return {mon:best};
   for(const g of W.items){const a=scr(g.x,g.y,.7);if(Math.hypot(a[0]-px,a[1]-py)<22)return {item:g}}
   for(const o of W.objs||[]){if((o.kind==='herb'||o.kind==='ore')&&!o.ready)continue;if(hitBox(o.x,o.y,o.kind==='shrine'?3.2:1.2,44)>=0)return {obj:o}}
@@ -4388,27 +4389,33 @@ function netChan(name,key){
 /* ---------- state ---------- */
 function netMapOK(){return W&&W.M&&!W.M.dungeon&&!W.arena&&!W.floor&&W.mapId!=='dungeon'}
 function netMapName(){const M=W.M||MAPS[W.mapId];return M&&M.n||W.mapId}
-function netMe(){const P=W.P;return {n:CH.name,lv:CH.lv,job:jobName(),look:playerLook(CH),x:Math.round(P.x),y:Math.round(P.y),a:+(P.ang||0).toFixed(2),d:P.dead?1:0}}
+function netMe(){const P=W.P;return {n:CH.name,lv:CH.lv,job:jobName(),look:playerLook(CH),x:Math.round(P.x),y:Math.round(P.y),a:+(P.ang||0).toFixed(2),d:P.dead?1:0,gn:(typeof GUILD!=='undefined'&&GUILD.g?GUILD.g.name:''),j:NET.joinT||0}}
 function netWorldMe(){return {n:CH.name,lv:CH.lv,job:jobName(),map:W?netMapName():''}}
 function netJoinWorld(){if(NET.wc||!AUTH.ready)return;NET.key=AUTH.uid;const c=netChan('world',NET.key);if(!c)return;NET.wc=c;
   c.onPres(o=>{const L={};for(const k in o){if(k===NET.key)continue;const s=o[k][o[k].length-1];if(s&&s.n)L[k]=s}NET.online=L;netBtn();if($('wOnline').classList.contains('show'))rOnline()});
-  c.onMsg(netOnMsg);c.track(netWorldMe())}
+  c.onMsg(netOnMsg);c.track(netWorldMe());whisperSub()}
 function netJoinMap(){netLeaveMap();if(!netMapOK()||!AUTH.ready)return;netJoinWorld();const key=W.mapId;NET.mapKey=key;const c=netChan('map:'+key,NET.key);if(!c)return;NET.mc=c;
   c.onPres(o=>{const seen=new Set();for(const k in o){if(k===NET.key)continue;const s=o[k][o[k].length-1];if(!s||!s.n)continue;seen.add(k);let e=NET.peers.get(k);
       if(!e){e={kind:'rp',id:'rp_'+k,key:k,x:s.x,y:s.y,tx:s.x,ty:s.y,r:14,ang:s.a||0,anim:{atk:0,hit:0,walk:0,t:Math.random()},buffs:{},dead:false,face:1};NET.peers.set(k,e);NET.force=true}
-      e.name=s.n;e.lv=s.lv;e.job=s.job;e.look=s.look||e.look||{g:'m',hair:0,hc:'#3a2418',cloth:'#6a5030'};e.pt=performance.now()}
+      e.name=s.n;e.lv=s.lv;e.job=s.job;e.gn=s.gn||'';e.j=s.j||0;e.look=s.look||e.look||{g:'m',hair:0,hc:'#3a2418',cloth:'#6a5030'};e.pt=performance.now()}
     for(const k of [...NET.peers.keys()])if(!seen.has(k))NET.peers.delete(k)});
-  c.onMsg(netOnMsg);NET.last=null;c.track(netMe());if(NET.wc)NET.wc.track(netWorldMe())}
+  c.onMsg(netOnMsg);NET.last=null;NET.joinT=Date.now();c.track(netMe());if(NET.wc)NET.wc.track(netWorldMe())}
 function netLeaveMap(){if(NET.mc){NET.mc.close();NET.mc=null}NET.peers.clear();NET.mapKey=null}
-function netLeaveAll(){netLeaveMap();if(NET.wc){NET.wc.close();NET.wc=null}NET.online={};netBtn()}
+function netLeaveAll(){netLeaveMap();if(NET.wh){try{SBK.sb.removeChannel(NET.wh)}catch(e){}NET.wh=null}if(NET.wc){NET.wc.close();NET.wc=null}NET.online={};netBtn()}
 /* ---------- messages ---------- */
-function netOnMsg(p){if(!p||!p.t)return;
-  if(p.t==='p'){const e=NET.peers.get(p.k);if(!e)return;e.tx=p.x;e.ty=p.y;e.ang=p.a;e.dead=!!p.d;if(Math.hypot(e.tx-e.x,e.ty-e.y)>700){e.x=e.tx;e.y=e.ty}return}
+const NET_H=[];function netOnMsg(p){if(!p||!p.t)return;for(const f of NET_H)if(f(p))return;
+  if(p.t==='p'){const e=NET.peers.get(p.k);if(!e)return;e.tx=p.x;e.ty=p.y;e.ang=p.a;e.dead=!!p.d;if(p.h!=null)e.h=p.h;if(Math.hypot(e.tx-e.x,e.ty-e.y)>700){e.x=e.tx;e.y=e.ty}return}
   if(p.t==='a'){const e=NET.peers.get(p.k);if(e)e.anim.atk=.28;return}
   if(p.t==='hey'){NET.force=true;return}
   if(p.t==='c'){const s=chatClean(String(p.s||'').slice(0,120)),n=String(p.n||'?').slice(0,16);if(!s)return;
     if(p.ch==='w'&&p.to){if(p.to!==nameKey(CH.name))return;NET.lastTo=n;log('[กระซิบจาก '+n+'] '+s,'cp');return}
     log((p.ch==='g'?'[ทั่วไป] ':'[แมพ] ')+n+': '+s,p.ch==='g'?'cg':'cm');const e=NET.peers.get(p.k);if(e)e.bubble={s:s.length>40?s.slice(0,39)+'…':s,t:6}}}
+/* ---------- private whispers: stored in DB table (RLS: only sender/receiver can read, sender name verified) ---------- */
+function netRealDB(){return SBK&&!SBK.mock&&SBK.sb}
+async function whisperDB(to,s){const sb=SBK.sb;try{const {data,error}=await sb.from('char_names').select('user_id,name').eq('name_key',nameKey(to)).maybeSingle();if(error)throw error;if(!data){toast('ไม่พบผู้เล่นชื่อ "'+to+'"');return}
+    const r=await sb.from('whispers').insert({from_name:CH.name,to_uid:data.user_id,body:s});if(r.error)throw r.error;log('[กระซิบถึง '+data.name+'] '+s,'cp')}
+  catch(e){toast(/whispers/.test(e.message||'')?'ระบบกระซิบยังไม่พร้อม · GM ต้องรัน SQL ส่วนกระซิบก่อน':'กระซิบไม่สำเร็จ: '+(e.message||e))}}
+function whisperSub(){if(!netRealDB()||NET.wh)return;const sb=SBK.sb;NET.wh=sb.channel('wh:'+AUTH.uid).on('postgres_changes',{event:'INSERT',schema:'public',table:'whispers',filter:'to_uid=eq.'+AUTH.uid},({new:m})=>{if(!m)return;const n=String(m.from_name||'?').slice(0,16),t=chatClean(String(m.body||'').slice(0,120));if(!t)return;NET.lastTo=n;log('[กระซิบจาก '+n+'] '+t,'cp')}).subscribe()}
 /* ---------- chat ---------- */
 const BADW=[/ค+ว+ย/g,/เ[หฮ]ี้?ย/g,/สั[สด](?!ส่วน)/g,/เย็ด/g,/หี(?![บด])/g,/ดอกทอง/g,/อีดอก/g,/ไอ้?สัตว์/g,/fuck/gi,/shit/gi,/bitch/gi,/cunt/gi];
 function chatClean(s){s=s.replace(/[\u0000-\u001f]/g,'').trim();for(const r of BADW)s=s.replace(r,m=>'*'.repeat(Math.min(4,m.length)));return s}
@@ -4419,11 +4426,11 @@ function chatSend(raw){let s=String(raw||'').trim();if(!s)return;if(!NET.wc&&!NE
   s=chatClean(s).slice(0,100);if(!s)return;
   if(s===NET.lastMsg&&now-NET.lastMsgT<10000){toast('ข้อความซ้ำ');return}NET.chatT=now;NET.lastMsg=s;NET.lastMsgT=now;
   const p={t:'c',k:NET.key,n:CH.name,s,ch};
-  if(ch==='w'){if(nameKey(to)===nameKey(CH.name))return;if(!Object.values(NET.online).some(o=>nameKey(o.n)===nameKey(to))){toast('ไม่พบ "'+to+'" ออนไลน์อยู่');return}p.to=nameKey(to);NET.wc&&NET.wc.send(p);log('[กระซิบถึง '+to+'] '+s,'cp');return}
+  if(ch==='w'){if(nameKey(to)===nameKey(CH.name))return;if(!Object.values(NET.online).some(o=>nameKey(o.n)===nameKey(to))){toast('ไม่พบ "'+to+'" ออนไลน์อยู่');return}p.to=nameKey(to);if(netRealDB()){whisperDB(to,s);return}NET.wc&&NET.wc.send(p);log('[กระซิบถึง '+to+'] '+s,'cp');return}
   if(ch==='m'){if(!NET.mc){toast('แมพนี้คุยได้เฉพาะแชททั่วไป (/g)');return}NET.mc.send(p);if(W.P)W.P.bubble={s:s.length>40?s.slice(0,39)+'…':s,t:6};log('[แมพ] '+CH.name+': '+s,'cm');return}
   NET.wc&&NET.wc.send(p);log('[ทั่วไป] '+CH.name+': '+s,'cg')}
 /* chat UI: tab + input + mode toggle */
-(function(){const st=document.createElement('style');st.textContent=`#log div.cm{color:#f4f0e0}#log div.cg{color:#ffd98a}#log div.cp{color:#f0a8ff}
+(function(){const st=document.createElement('style');st.textContent=`#log div.cm{color:#f4f0e0}#log div.cg{color:#ffd98a}#log div.cp{color:#f0a8ff}#log div.cpa{color:#8aff9a}#log div.cgu{color:#7ad8ff}
 #chatRow{display:flex;border-top:1px solid var(--line)}#chatRow input{flex:1;min-width:0;border-top:0!important;color:#f4ecd8!important}#chatMode{background:#1a1208;border:0;border-right:1px solid var(--line);color:#ffd98a;font:700 11.5px inherit;padding:0 8px;cursor:pointer;white-space:nowrap}
 #chat.min #chatRow{display:none}#autobar button#btnOnline{white-space:nowrap}
 .olst .li{grid-template-columns:1fr auto!important;cursor:pointer}.olst .li:hover{background:#ffffff10}`;document.head.appendChild(st);
@@ -4434,7 +4441,7 @@ function chatSend(raw){let s=String(raw||'').trim();if(!s)return;if(!NET.wc&&!NE
   inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){chatSend(inp.value);inp.value='';inp.blur()}else if(e.key==='Escape')inp.blur()});
   inp.addEventListener('pointerdown',e=>e.stopPropagation());
   addEventListener('keydown',e=>{if(!INGAME||e.key!=='Enter'||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;e.preventDefault();inp.focus()})})();
-renderLog=function(){const el=$('log');el.innerHTML=LOGS.filter(l=>LOGF==='all'||l.c===LOGF||(LOGF==='sys'&&(l.c==='exp'||l.c==='boss'))||(LOGF==='chat'&&/^c[mgp]$/.test(l.c))).slice(-60).map(l=>'<div class="'+l.c+'">'+esc(l.s)+'</div>').join('');el.scrollTop=el.scrollHeight};
+renderLog=function(){const el=$('log');el.innerHTML=LOGS.filter(l=>LOGF==='all'||l.c===LOGF||(LOGF==='sys'&&(l.c==='exp'||l.c==='boss'))||(LOGF==='chat'&&/^c(m|g|p|pa|gu)$/.test(l.c))).slice(-60).map(l=>'<div class="'+l.c+'">'+esc(l.s)+'</div>').join('');el.scrollTop=el.scrollHeight};
 /* ---------- online list ---------- */
 mkWin('wOnline','ผู้เล่นออนไลน์','left:50%;top:12%;width:min(380px,94vw);transform:translateX(-50%)');
 function rOnline(){const L=Object.values(NET.online).sort((a,b)=>b.lv-a.lv);const here=NET.mapKey?netMapName():null;
@@ -4455,18 +4462,309 @@ function netTick(dt){if(!INGAME||!W||!W.P){if(NET.wc)netLeaveAll();return}
     e.anim.t+=dt;e.anim.atk=Math.max(0,e.anim.atk-dt);e.anim.walk=Math.max(0,e.anim.walk-dt);if(e.bubble){e.bubble.t-=dt;if(e.bubble.t<=0)e.bubble=null}}
   if(!NET.mc)return;NET.sendT-=dt;NET.lookT-=dt;
   if(NET.lookT<=0){NET.lookT=2;const me=netMe(),j=JSON.stringify([me.look,me.lv,me.job,me.n]);if(j!==NET.lookJ){const first=!NET.lookJ;NET.lookJ=j;if(!first){NET.mc.track(me);NET.wc&&NET.wc.track(netWorldMe())}}}
-  if(NET.sendT>0)return;NET.sendT=NET_HZ;const P=W.P,L=NET.last,x=Math.round(P.x),y=Math.round(P.y),a=+(P.ang||0).toFixed(2),d=P.dead?1:0;
-  if(!NET.force&&L&&Math.abs(L.x-x)<3&&Math.abs(L.y-y)<3&&Math.abs(L.a-a)<.15&&L.d===d)return;NET.force=false;NET.last={x,y,a,d};NET.mc.send({t:'p',k:NET.key,x,y,a,d})}
+  if(NET.sendT>0)return;NET.sendT=NET_HZ;const P=W.P,L=NET.last,x=Math.round(P.x),y=Math.round(P.y),a=+(P.ang||0).toFixed(2),d=P.dead?1:0,h=Math.round(P.hp/derive(P).maxHp*20)*5;
+  if(!NET.force&&L&&Math.abs(L.x-x)<3&&Math.abs(L.y-y)<3&&Math.abs(L.a-a)<.15&&L.d===d&&L.h===h)return;NET.force=false;NET.last={x,y,a,d,h};NET.mc.send({t:'p',k:NET.key,x,y,a,d,h})}
 {const _st=step;step=function(dt){const r=_st(dt);try{netTick(dt)}catch(e){console.error(e)}return r}}
 /* my attack swings → others see the animation */
 {const _pe=processEvents;processEvents=function(){if(NET.mc&&W&&W.P&&W.P.anim&&W.P.anim.atk>.2&&performance.now()-NET.atkT>350){NET.atkT=performance.now();NET.mc.send({t:'a',k:NET.key})}return _pe()}}
 /* names + chat bubbles over other players */
 {const _do=drawOverlay;drawOverlay=function(dt,T){_do(dt,T);
-  for(const e of NET.peers.values()){const a=scr(e.x,e.y,0);if(!onScr(a))continue;label(a[0],a[1]+24,'Lv'+(e.lv|0)+' '+e.name,'#9ad8ff',12);if(e.job)label(a[0],a[1]+38,e.job,'#7aa8c8',10.5);if(e.dead){const b=scr(e.x,e.y,2);label(b[0],b[1],'สลบ','#ff9a8a',12)}
+  for(const e of NET.peers.values()){const a=scr(e.x,e.y,0);if(!onScr(a))continue;const inP=typeof inParty==='function'&&inParty(e.key);label(a[0],a[1]+24,'Lv'+(e.lv|0)+' '+e.name,inP?'#8aff9a':'#9ad8ff',12);label(a[0],a[1]+38,(e.gn?'«'+e.gn+'» ':'')+(e.job||''),'#7aa8c8',10.5);if(inP&&e.h!=null)bar(a[0],a[1]+8,40,e.h/100,'#4ade80');if(e.dead){const b=scr(e.x,e.y,2);label(b[0],b[1],'สลบ','#ff9a8a',12)}
     if(e.bubble){const b=scr(e.x,e.y,(e.hH||3.4)+1.4);if(onScr(b))label(b[0],b[1],e.bubble.s,'#fffbe8',12.5,true)}}
   const P=W.P;if(P&&P.bubble){const b=scr(P.x,P.y,(P.hH||3.4)+1.4);if(onScr(b))label(b[0],b[1],P.bubble.s,'#fffbe8',12.5,true)}}}
 setInterval(()=>{if(!INGAME&&NET.wc)netLeaveAll()},1000);
 addEventListener('pagehide',()=>{try{netLeaveAll()}catch(e){}});
+
+/* ===== QoL: แถบลัดแก้ไขได้ (มือถือ) · แชทมือถือ · มอนเยอะขึ้น · ปุ่มออโต้ในภารกิจรายวัน ===== */
+/* ---------- more monsters on field maps ---------- */
+const MON_MUL=1.6;
+for(const k in MAPS){const M=MAPS[k];if(!M||!M.spawns||!M.spawns.length||M.theme==='town')continue;M.spawns.forEach(s=>{s[1]=Math.ceil(s[1]*MON_MUL)})}
+/* ---------- hotbar edit mode: tap ✎ → tap slot A then slot B to swap · ✕ removes ---------- */
+let HOTEDIT=false,HOTSEL=null;
+(function(){const st=document.createElement('style');st.textContent=`#hotbar .hedit{width:30px;align-self:stretch;background:#1c1a22;border:1px solid #5a4a30;border-radius:6px;color:#ffe9a8;font-size:15px;cursor:pointer;padding:0}
+#hotbar.edit .hedit{background:linear-gradient(#e0a030,#a06010);color:#fff}#hotbar.edit .slot .x{display:block!important;width:20px;height:20px;line-height:20px;font-size:12px;top:-8px;right:-7px}
+#hotbar.edit .slot{animation:hwig .35s ease-in-out infinite alternate}#hotbar .slot.hsel{outline:2px solid #ffd75e;outline-offset:1px;animation:none}
+@keyframes hwig{from{transform:rotate(-2deg)}to{transform:rotate(2deg)}}`;document.head.appendChild(st)})();
+{const _rh=renderHotbar;renderHotbar=function(){_rh();const el=$('hotbar');el.classList.toggle('edit',HOTEDIT);const b=document.createElement('button');b.type='button';b.className='hedit';b.textContent=HOTEDIT?'✓':'✎';b.title=HOTEDIT?'เสร็จสิ้น':'จัดแถบลัด (สลับ/ลบ)';b.setAttribute('aria-label',b.title);el.appendChild(b);
+  if(HOTSEL!=null){const s=el.querySelector('[data-h="'+HOTSEL+'"]');if(s)s.classList.add('hsel')}}}
+$('hotbar').addEventListener('pointerdown',e=>{const ed=e.target.closest('.hedit');
+  if(ed){e.stopImmediatePropagation();e.stopPropagation();HOTEDIT=!HOTEDIT;HOTSEL=null;renderHotbar();if(HOTEDIT)toast('แตะช่องหนึ่ง แล้วแตะอีกช่องเพื่อสลับ · แตะ ✕ เพื่อลบ · แตะ ✓ เมื่อเสร็จ');else saveAll();return}
+  if(!HOTEDIT||e.target.closest('[data-x]'))return;const b=e.target.closest('[data-h]');if(!b)return;e.stopImmediatePropagation();e.stopPropagation();const i=+b.dataset.h;
+  if(HOTSEL==null)HOTSEL=i;else{if(HOTSEL!==i){const t=CH.hot[HOTSEL];CH.hot[HOTSEL]=CH.hot[i];CH.hot[i]=t}HOTSEL=null;saveAll()}renderHotbar()},true);
+addEventListener('keydown',e=>{if(HOTEDIT&&e.key>='1'&&e.key<='9'&&!/INPUT|TEXTAREA/.test(e.target.tagName))e.stopImmediatePropagation()},true);
+/* ---------- mobile chat: send button, bigger input (no iOS zoom), lift box above keyboard ---------- */
+(function(){const st=document.createElement('style');st.textContent=`#chatSend{background:#3a2a10;border:0;border-left:1px solid var(--line);color:#ffd98a;font-size:14px;padding:0 10px;cursor:pointer}
+@media (pointer:coarse){#chatIn{font-size:16px!important;padding:6px 8px!important}#chat.typing{top:max(4px,env(safe-area-inset-top,0px))!important;bottom:auto!important;z-index:2147483100;height:auto!important;max-height:46vh;opacity:1!important}#chat.typing #log{max-height:28vh}}`;document.head.appendChild(st);
+  const row=$('chatRow'),inp=$('chatIn');if(!row||!inp)return;const s=document.createElement('button');s.type='button';s.id='chatSend';s.textContent='➤';s.setAttribute('aria-label','ส่งข้อความ');row.appendChild(s);
+  const send=()=>{chatSend(inp.value);inp.value=''};s.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();send();inp.focus()});
+  inp.addEventListener('focus',()=>{$('chat').classList.add('typing');$('chat').classList.remove('min')});inp.addEventListener('blur',()=>setTimeout(()=>$('chat').classList.remove('typing'),150));
+  ['pointerdown','touchstart','mousedown'].forEach(ev=>$('chat').addEventListener(ev,e=>e.stopPropagation(),{passive:true}))})();
+/* ---------- daily tasks: auto buttons ---------- */
+function lvMap(){const L=CH.lv;let best=null,bl=-1;for(const r of MAPINFO){const m=String(r[3]||'').match(/Lv(\d+)\D+(\d+)/);if(!m||!MAPS[r[0]]||!(MAPS[r[0]].spawns||[]).length)continue;const lo=+m[1],hi=+m[2];if(L>=lo&&L<=hi)return r[0];if(lo<=L&&lo>bl){bl=lo;best=r[0]}}return best||'field1'}
+function sqPick(){const s=sqState();const ok=SQ.filter(q=>(s.cnt[q.id]||0)<SQ_DAILY);return ok.filter(q=>q.lv<=CH.lv+2).pop()||ok[0]||null}
+function autoGo(goal,msg){if(!W||W.P.dead)return;if(AUTO.on)stopAuto();AUTO.on=true;AUTO.mode='dgo';AUTO.goal=goal;AUTO.ax=W.P.x;AUTO.ay=W.P.y;AUTO.map=W.mapId;AUTO.warpT=0;AUTO.msg=msg||'';closeWin('wDaily');toast(msg||'ออโต้กำลังพาไป');autoBarUpd()}
+function autoDgo(){const g=AUTO.goal;if(!g){stopAuto();return true}
+  if(g.map){if(W.mapId!==g.map||W.floor){autoWarp(g.map);return true}const f=g.then;AUTO.goal=null;f&&f();return true}
+  const n=NPCS.find(x=>x.id===g.npc);if(!n){stopAuto('หา NPC ไม่เจอ');return true}const mp=n.map||'town';if(W.mapId!==mp||W.floor){autoWarp(mp,n.x,n.y+70);return true}
+  const e=NPCLIST.find(x=>x.id===g.npc);if(!e){stopAuto('หา NPC ไม่เจอ');return true}AUTO.msg='เดินไปหา '+e.n;
+  if(dist(W.P,e)<95){W.P.act=null;W.P.path=[];const f=g.then;AUTO.goal=null;stopAuto();f&&f(e);return true}
+  if(dist(W.P,e)>500&&autoHop(e.x,e.y+60,'หา'+e.n))return true;if(!W.P.act||W.P.act.type!=='move')autoCmd({type:'move',x:e.x,y:e.y+40});return true}
+{const _at=autoTick;autoTick=function(){if(AUTO.mode==='dgo'&&W&&W.P&&!W.P.dead&&!WARPING){if(autoDgo())return}return _at()}}
+function openSmithTab(e,tab){openNpc(e);NPCSTATE.tab=tab;renderNpc()}
+function dailyAuto(k){
+  if(k==='kill'){const mp=(W.M.spawns||[]).length&&W.M.theme!=='town'&&!W.floor?W.mapId:lvMap();autoGo({map:mp,then:()=>{AUTO.on=false;startAuto('hunt')}},'ออโต้ล่า: ไป '+MAPS[mp].n);return}
+  if(k==='side'||k==='boss'){const s=sqState();if(s.cur){closeWin('wDaily');startAuto('side');return}const q=sqPick();if(!q){toast('เควสรองครบทุกตัววันนี้แล้ว');return}
+    autoGo({npc:'sq_npc',then:()=>{sqAccept(q.id);startAuto('side')}},'ไปรับเควสรอง: '+q.n);return}
+  if(k==='refine'||k==='salvage'){const id=W.mapId==='luoyang'?'ly_smith':'smith';autoGo({npc:id,then:e=>openSmithTab(e,k)},'ไปหาช่างตีเหล็ก');return}
+  if(k==='arena'){autoGo({npc:'hl_arena',then:e=>openNpc(e)},'ไปลานประลองหู่เหลา');return}}
+{const _rd=rDaily;rDaily=function(){_rd();const D=dailyState();const box=$('wDailyB');const rows=box.querySelectorAll('.list .li');TASKS.forEach((T,i)=>{const row=rows[i];if(!row||T.k==='login'||(D.p[T.k]||0)>=T.goal)return;
+    const sp=row.lastElementChild;const b=document.createElement('button');b.type='button';b.className='btn sm';b.dataset.dauto=T.k;b.textContent='▶ ออโต้';b.style.marginRight='6px';row.style.gridTemplateColumns='1fr auto auto';row.insertBefore(b,sp)})}}
+$('wDailyB').addEventListener('click',e=>{const b=e.target.closest('[data-dauto]');if(!b)return;e.stopImmediatePropagation();audioInit();dailyAuto(b.dataset.dauto)},true);
+cv.addEventListener('pointerdown',()=>{const a=document.activeElement;if(a&&a.id==='chatIn')a.blur()},true);
+
+/* ===== สังคมออนไลน์: เมนูผู้เล่น · ปาร์ตี้ผู้เล่น (แบ่ง EXP/ทอยเต๋าของ SSR+) · ส่งของ/เงิน (ไปรษณีย์) · กิลด์ ===== */
+/* ---------- data layer (Supabase หรือ mock ใน localStorage) ---------- */
+const DB={
+  mock(){return !SBK||SBK.mock||!SBK.sb},sb(){return SBK.sb},
+  md(){let d;try{d=JSON.parse(localStorage.getItem('tk_mock_db'))||{}}catch(e){d={}}d.names=d.names||{};d.mails=d.mails||[];d.guilds=d.guilds||[];d.gm=d.gm||{};d.ginv=d.ginv||[];d.seq=d.seq||1;return d},
+  mput(d){try{localStorage.setItem('tk_mock_db',JSON.stringify(d))}catch(e){}},
+  ping(o){try{const b=new BroadcastChannel('tk_db');b.postMessage(o);b.close()}catch(e){}},
+  async who(name){const k=nameKey(name);if(this.mock()){const d=this.md();return d.names[k]?{user_id:d.names[k],name}:null}
+    const {data,error}=await this.sb().from('char_names').select('user_id,name').eq('name_key',k).maybeSingle();if(error)throw error;return data},
+  /* mail */
+  async mailSend(toName,coins,items,note){const t=await this.who(toName);if(!t)throw new Error('ไม่พบตัวละคร "'+toName+'"');
+    const row={from_name:CH.name,to_uid:t.user_id,to_name:t.name,coins:coins|0,items,note:note||''};
+    if(this.mock()){const d=this.md();d.mails.push(Object.assign({id:d.seq++,from_uid:AUTH.uid,claimed:false,created_at:Date.now()},row));this.mput(d);this.ping({mail:t.user_id});return t}
+    const {error}=await this.sb().from('mails').insert(row);if(error)throw error;return t},
+  async inbox(){if(this.mock())return this.md().mails.filter(m=>m.to_uid===AUTH.uid&&!m.claimed);
+    const {data,error}=await this.sb().from('mails').select('*').eq('to_uid',AUTH.uid).eq('claimed',false).order('id').limit(50);if(error)throw error;return data||[]},
+  async claim(id){if(this.mock()){const d=this.md(),m=d.mails.find(x=>x.id===id);if(!m||m.claimed)return false;m.claimed=true;this.mput(d);return true}
+    const {data,error}=await this.sb().from('mails').update({claimed:true}).eq('id',id).eq('claimed',false).select('id');if(error)throw error;return !!(data&&data.length)},
+  watchMail(cb){if(this.mock()){try{const b=new BroadcastChannel('tk_db');b.onmessage=e=>{if(e.data&&e.data.mail===AUTH.uid)cb()}}catch(e){}return}
+    this.sb().channel('mail:'+AUTH.uid).on('postgres_changes',{event:'INSERT',schema:'public',table:'mails',filter:'to_uid=eq.'+AUTH.uid},()=>cb()).subscribe()},
+  /* guild */
+  async myGuild(){const k=nameKey(CH.name);if(this.mock()){const d=this.md(),m=d.gm[k];if(!m)return null;const g=d.guilds.find(x=>x.id===m.guild_id);if(!g){delete d.gm[k];this.mput(d);return null}return {g,me:m,list:Object.values(d.gm).filter(x=>x.guild_id===g.id)}}
+    const sb=this.sb();const {data:m,error}=await sb.from('guild_members').select('*').eq('name_key',k).maybeSingle();if(error)throw error;if(!m)return null;
+    const {data:g}=await sb.from('guilds').select('*').eq('id',m.guild_id).maybeSingle();if(!g)return null;const {data:list}=await sb.from('guild_members').select('*').eq('guild_id',g.id).order('joined_at');return {g,me:m,list:list||[]}},
+  async gCreate(name){const k=nameKey(CH.name);if(this.mock()){const d=this.md();if(d.guilds.some(g=>g.name.toLowerCase()===name.toLowerCase()))throw new Error('ชื่อกิลด์นี้มีแล้ว');if(d.gm[k])throw new Error('อยู่ในกิลด์อื่นแล้ว');const g={id:d.seq++,name,leader_key:k,leader_uid:AUTH.uid};d.guilds.push(g);d.gm[k]={name_key:k,user_id:AUTH.uid,name:CH.name,guild_id:g.id,role:'leader',joined_at:Date.now()};this.mput(d);return g}
+    const sb=this.sb();const {data:g,error}=await sb.from('guilds').insert({name,leader_key:k,leader_uid:AUTH.uid}).select().single();if(error)throw new Error(error.code==='23505'?'ชื่อกิลด์นี้มีแล้ว':error.message);
+    const r=await sb.from('guild_members').insert({name_key:k,user_id:AUTH.uid,name:CH.name,guild_id:g.id,role:'leader'});if(r.error){await sb.from('guilds').delete().eq('id',g.id);throw r.error}return g},
+  async gInvite(gid,toName){const t=await this.who(toName);if(!t)throw new Error('ไม่พบตัวละคร "'+toName+'"');const k=nameKey(t.name);
+    if(this.mock()){const d=this.md();if(d.gm[k])throw new Error(t.name+' อยู่ในกิลด์แล้ว');if(!d.ginv.some(i=>i.guild_id===gid&&i.name_key===k))d.ginv.push({guild_id:gid,name_key:k,from_name:CH.name});this.mput(d);return t}
+    const {error}=await this.sb().from('guild_invites').upsert({guild_id:gid,name_key:k,from_name:CH.name});if(error)throw error;return t},
+  async gInvites(){const k=nameKey(CH.name);if(this.mock()){const d=this.md();return d.ginv.filter(i=>i.name_key===k).map(i=>Object.assign({gname:(d.guilds.find(g=>g.id===i.guild_id)||{}).name},i)).filter(i=>i.gname)}
+    const {data,error}=await this.sb().from('guild_invites').select('guild_id,from_name,guilds(name)').eq('name_key',k);if(error)throw error;return (data||[]).map(i=>({guild_id:i.guild_id,from_name:i.from_name,gname:i.guilds&&i.guilds.name})).filter(i=>i.gname)},
+  async gJoin(gid){const k=nameKey(CH.name);if(this.mock()){const d=this.md();if(!d.ginv.some(i=>i.guild_id===gid&&i.name_key===k))throw new Error('คำเชิญหมดอายุ');d.gm[k]={name_key:k,user_id:AUTH.uid,name:CH.name,guild_id:gid,role:'member',joined_at:Date.now()};d.ginv=d.ginv.filter(i=>i.name_key!==k);this.mput(d);return}
+    const sb=this.sb();const {error}=await sb.from('guild_members').insert({name_key:k,user_id:AUTH.uid,name:CH.name,guild_id:gid,role:'member'});if(error)throw error;await sb.from('guild_invites').delete().eq('name_key',k)},
+  async gDecline(gid){const k=nameKey(CH.name);if(this.mock()){const d=this.md();d.ginv=d.ginv.filter(i=>!(i.guild_id===gid&&i.name_key===k));this.mput(d);return}await this.sb().from('guild_invites').delete().eq('guild_id',gid).eq('name_key',k)},
+  async gLeave(G){const k=nameKey(CH.name);if(this.mock()){const d=this.md();if(G.g.leader_key===k){d.guilds=d.guilds.filter(g=>g.id!==G.g.id);for(const x in d.gm)if(d.gm[x].guild_id===G.g.id)delete d.gm[x]}else delete d.gm[k];this.mput(d);return}
+    const sb=this.sb();if(G.g.leader_key===k){const {error}=await sb.from('guilds').delete().eq('id',G.g.id);if(error)throw error}else{const {error}=await sb.from('guild_members').delete().eq('name_key',k);if(error)throw error}},
+  async gKick(G,key){if(this.mock()){const d=this.md();if(d.gm[key]&&d.gm[key].guild_id===G.g.id)delete d.gm[key];this.mput(d);return}const {error}=await this.sb().from('guild_members').delete().eq('name_key',key).eq('guild_id',G.g.id);if(error)throw error}};
+/* ---------- helpers ---------- */
+function peerByName(n){const k=nameKey(n);for(const e of NET.peers.values())if(nameKey(e.name)===k)return e;return null}
+function onlineByName(n){const k=nameKey(n);for(const id in NET.online){const o=NET.online[id];if(nameKey(o.n)===k)return Object.assign({key:id},o)}return null}
+function wsend(p){if(NET.wc)NET.wc.send(Object.assign({k:NET.key,n:CH.name},p))}
+function confirmBox(html,yes,no,okT,noT){const d=document.createElement('div');d.className='hud panel cbox';d.innerHTML='<div>'+html+'</div><div class="row" style="gap:6px;margin-top:8px;justify-content:center"><button class="btn sm" type="button" data-y>'+(okT||'ตอบรับ')+'</button><button class="btn ghost sm" type="button" data-n>'+(noT||'ปฏิเสธ')+'</button></div>';
+  document.body.appendChild(d);const done=f=>{d.remove();clearTimeout(t);f&&f()};d.querySelector('[data-y]').onclick=()=>done(yes);d.querySelector('[data-n]').onclick=()=>done(no);d.addEventListener('pointerdown',e=>e.stopPropagation());const t=setTimeout(()=>done(no),30000);SFX.unlock&&SFX.unlock()}
+(function(){const st=document.createElement('style');st.textContent=`.cbox{left:50%;top:22%;transform:translateX(-50%);z-index:2147483200;padding:12px 16px;max-width:min(380px,92vw);text-align:center;font-size:13.5px;line-height:1.5}
+#partyhud .m.pp{border-left:3px solid #8aff9a}#partyhud .m.pp.far{opacity:.6}.pm-acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.pm-acts .btn{width:100%}
+.gift-li{display:grid;grid-template-columns:30px 1fr auto;gap:6px;align-items:center;padding:3px 4px;border-bottom:1px solid #ffffff10}.gift-li img{width:28px;height:28px}.gift-li input{width:54px}.gift-li.on{background:#ffd75e1a}`;document.head.appendChild(st)})();
+/* ---------- tap another player → menu ---------- */
+mkWin('wPlayer','ผู้เล่น','left:50%;top:18%;width:min(340px,94vw);transform:translateX(-50%)');
+let PMENU=null;
+function rPlayer(){const e=PMENU;if(!e){$('wPlayerB').innerHTML='';return}const o=onlineByName(e.name)||{};const inP=inParty(e.key||o.key);
+  let h='<div style="font-size:15px"><b style="color:#9ad8ff">'+esc(e.name)+'</b> <span class="muted">Lv'+(e.lv|0)+' '+esc(e.job||'')+'</span></div>'+(e.gn?'<div class="muted" style="font-size:12px">กิลด์ «'+esc(e.gn)+'»</div>':'');
+  h+='<div class="pm-acts"><button class="btn sm" type="button" data-pm="wh">💬 กระซิบ</button>'+(inP?'<button class="btn ghost sm" type="button" disabled>✓ อยู่ในปาร์ตี้</button>':'<button class="btn sm" type="button" data-pm="party">👥 เชิญปาร์ตี้</button>')+
+    '<button class="btn sm" type="button" data-pm="gift">🎁 ส่งของ/เงิน</button>'+(GUILD.g&&!e.gn?'<button class="btn sm" type="button" data-pm="guild">🏯 ชวนเข้ากิลด์</button>':'<button class="btn ghost sm" type="button" disabled>🏯 '+(e.gn?'มีกิลด์แล้ว':'ท่านยังไม่มีกิลด์')+'</button>')+'</div>';
+  $('wPlayerB').innerHTML=h}
+{const _rw=renderWin;renderWin=function(id){if(id==='wPlayer')return rPlayer();if(id==='wGift')return rGift();if(id==='wGuild')return rGuild();return _rw(id)}}
+$('wPlayerB').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b||!PMENU)return;const p=PMENU,k=b.dataset.pm;
+  if(k==='wh'){closeWin('wPlayer');const i=$('chatIn');i.value='/w '+p.name+' ';$('chat').classList.remove('min');i.focus()}
+  if(k==='party')partyInvite(p);
+  if(k==='gift'){closeWin('wPlayer');openGift(p.name)}
+  if(k==='guild')guildInvite(p.name)});
+function rpAt(px,py){let best=null,bd=1e9;for(const e of NET.peers.values()){const a=scr(e.x,e.y,0),b=scr(e.x,e.y,e.hH||3.4);if(a[2]>=1)continue;if(px>a[0]-26&&px<a[0]+26&&py<a[1]+40&&py>b[1]-8){const d=Math.abs(px-a[0])+Math.abs(py-(a[1]+b[1])/2);if(d<bd){bd=d;best=e}}}return best}
+cv.addEventListener('pointerdown',e=>{if(!INGAME||!W||e.button)return;const p=rpAt(e.clientX,e.clientY);if(!p)return;e.stopImmediatePropagation();e.preventDefault();PMENU=p;openWin('wPlayer')},true);
+/* ---------- player party ---------- */
+const PTY={id:null,lead:null,m:[]};// m:[[key,name]]
+function inParty(key){return !!(PTY.id&&key&&PTY.m.some(x=>x[0]===key))}
+function partyNear(){if(!PTY.id)return [];return PTY.m.filter(x=>x[0]!==NET.key).map(x=>NET.peers.get(x[0])).filter(e=>e&&!e.dead&&dist(e,W.P)<1600)}
+function partyInvite(p){const o=onlineByName(p.name);if(!o){toast(p.name+' ไม่ได้ออนไลน์');return}if(PTY.id&&PTY.lead!==NET.key){toast('เฉพาะหัวหน้าปาร์ตี้ที่เชิญได้');return}if(PTY.m.length>=5){toast('ปาร์ตี้เต็ม (5 คน)');return}
+  if(!PTY.id){PTY.id=NET.key.slice(0,8)+Date.now().toString(36);PTY.lead=NET.key;PTY.m=[[NET.key,CH.name]]}wsend({t:'pinv',to:o.key,pid:PTY.id});toast('ส่งคำเชิญปาร์ตี้ถึง '+p.name+' แล้ว');closeWin('wPlayer')}
+function partySet(){if(PTY.lead!==NET.key)return;wsend({t:'pset',pid:PTY.id,lead:PTY.lead,m:PTY.m});partyUI()}
+function partyLeave(){if(!PTY.id)return;wsend({t:'pleave',pid:PTY.id});log('ออกจากปาร์ตี้แล้ว','party');PTY.id=null;PTY.lead=null;PTY.m=[];partyUI()}
+function partyUI(){hudUpdate&&hudUpdate(true);if($('wParty').classList.contains('show'))renderWin('wParty')}
+NET_H.push(p=>{
+  if(p.t==='pinv'){if(p.to!==NET.key)return true;if(PTY.id){wsend({t:'pno',pid:p.pid,why:'มีปาร์ตี้อยู่แล้ว'});return true}
+    confirmBox('<b>'+esc(p.n)+'</b> เชิญท่านเข้าปาร์ตี้',()=>wsend({t:'pjoin',pid:p.pid}),()=>wsend({t:'pno',pid:p.pid,why:'ปฏิเสธ'}));return true}
+  if(!p.pid)return false;
+  if(p.t==='pjoin'&&p.pid===PTY.id&&PTY.lead===NET.key){if(PTY.m.length>=5||PTY.m.some(x=>x[0]===p.k))return true;PTY.m.push([p.k,p.n]);log(p.n+' เข้าร่วมปาร์ตี้','party');partySet();return true}
+  if(p.t==='pno'&&p.pid===PTY.id){toast(p.n+': '+(p.why||'ปฏิเสธ'));if(PTY.m.length<=1){PTY.id=null;PTY.lead=null;PTY.m=[]}return true}
+  if(p.t==='pset'){if(!p.m.some(x=>x[0]===NET.key)){if(PTY.id===p.pid){PTY.id=null;PTY.m=[];PTY.lead=null;log('ถูกนำออกจากปาร์ตี้','party');partyUI()}return true}
+    const was=PTY.id;PTY.id=p.pid;PTY.lead=p.lead;PTY.m=p.m;if(!was)log('เข้าร่วมปาร์ตี้ของ '+p.n+' แล้ว · แบ่ง EXP เมื่ออยู่ใกล้กัน','party');partyUI();return true}
+  if(p.t==='pleave'&&p.pid===PTY.id){PTY.m=PTY.m.filter(x=>x[0]!==p.k);log(p.n+' ออกจากปาร์ตี้','party');if(p.k===PTY.lead){PTY.lead=PTY.m[0]&&PTY.m[0][0];}if(PTY.m.length<=1){PTY.id=null;PTY.m=[];PTY.lead=null;log('ปาร์ตี้ถูกยุบ','party')}else partySet();partyUI();return true}
+  if(p.t==='pkick'&&p.pid===PTY.id&&p.k===PTY.lead){PTY.m=PTY.m.filter(x=>x[0]!==p.who);if(p.who===NET.key){PTY.id=null;PTY.m=[];PTY.lead=null;log('ถูกนำออกจากปาร์ตี้','party')}partyUI();return true}
+  if(p.t==='pexp'&&p.pid===PTY.id){if(!(p.to||[]).includes(NET.key))return true;_gainExpRaw(p.b,p.j);log('แบ่ง EXP จาก '+p.n+': +'+p.b+' EXP · +'+p.j+' JOB','party');return true}
+  if(p.t==='roll'&&p.pid===PTY.id){log('🎲 ทอยเต๋า '+p.item+': '+p.r.map(x=>x[0]+' '+x[1]).join(' · ')+' → '+p.win+' ได้รับ','party');if(p.win!==CH.name)toast('🎲 '+p.win+' ได้ '+p.item);return true}
+  if(p.t==='c'&&p.ch==='p'){if(p.pid===PTY.id&&p.k!==NET.key)log('[ปาร์ตี้] '+String(p.n).slice(0,16)+': '+chatClean(String(p.s||'').slice(0,120)),'cpa');return true}
+  return false});
+/* leader drops off: members time out via presence */
+setInterval(()=>{if(!PTY.id||!NET.wc)return;const on=new Set(Object.keys(NET.online).concat([NET.key]));const before=PTY.m.length;PTY.m=PTY.m.filter(x=>on.has(x[0]));if(PTY.m.length!==before){if(!PTY.m.some(x=>x[0]===PTY.lead))PTY.lead=PTY.m[0]&&PTY.m[0][0];if(PTY.m.length<=1){PTY.id=null;PTY.m=[];PTY.lead=null;log('ปาร์ตี้ถูกยุบ (สมาชิกออฟไลน์)','party')}else partySet();partyUI()}},5000);
+/* party HUD + party window section */
+{const _hu=hudUpdate;hudUpdate=function(a){const r=_hu(a);try{const el=$('partyhud');el.querySelectorAll('.pp').forEach(x=>x.remove());if(PTY.id){const html=PTY.m.filter(x=>x[0]!==NET.key).map(x=>{const e=NET.peers.get(x[0]);const h=e&&e.h!=null?e.h:100;return '<div class="m pp'+(e?'':' far')+'" data-w="wParty">'+esc(x[1])+(x[0]===PTY.lead?' 👑':'')+(e?'':' · ต่างแมพ')+'<div class="bar" style="--c:#8aff9a"><i style="width:'+h+'%"></i></div></div>'}).join('');el.insertAdjacentHTML('afterbegin',html)}}catch(e){}return r}}
+{const _rw=renderWin;renderWin=function(id){const r=_rw(id);if(id==='wParty'){const B=$('wPartyB');let h='<div class="detail" id="ppBox" style="margin-bottom:8px"><b>ปาร์ตี้ผู้เล่น</b>';
+    if(!PTY.id)h+='<p class="muted" style="font-size:12px;margin:4px 0">ยังไม่มีปาร์ตี้ · แตะตัวผู้เล่นคนอื่นในแมพ แล้วกด "เชิญปาร์ตี้" (สูงสุด 5 คน) · อยู่ใกล้กันจะแบ่ง EXP +10% ต่อคน · ของ SSR ขึ้นไปทอยเต๋าแบ่งกัน</p>';
+    else{h+='<div class="list" style="margin-top:4px">'+PTY.m.map(x=>{const e=NET.peers.get(x[0]);return '<div class="li" style="grid-template-columns:1fr auto"><div><b>'+esc(x[1])+(x[0]===PTY.lead?' 👑':'')+(x[0]===NET.key?' (ท่าน)':'')+'</b><small>'+(x[0]===NET.key?'':e?'แมพเดียวกัน':'ต่างแมพ')+'</small></div>'+(PTY.lead===NET.key&&x[0]!==NET.key?'<button class="btn ghost sm" type="button" data-pk="'+x[0]+'">นำออก</button>':'<span></span>')+'</div>'}).join('')+'</div><button class="btn ghost sm" type="button" data-pleave style="margin-top:6px">ออกจากปาร์ตี้</button>'}
+    B.insertAdjacentHTML('afterbegin',h+'</div>')}return r}}
+$('wPartyB').addEventListener('click',e=>{const k=e.target.closest('[data-pk]'),l=e.target.closest('[data-pleave]');if(!k&&!l)return;e.stopImmediatePropagation();if(l)partyLeave();else{wsend({t:'pkick',pid:PTY.id,who:k.dataset.pk});PTY.m=PTY.m.filter(x=>x[0]!==k.dataset.pk);partySet()}renderWin('wParty')},true);
+/* EXP share: kills inside party range split EXP (+10%/member); SSR+ drops are rolled */
+let KILLCTX=null;const _gainExpRaw=gainExp;
+{const _k=kill;kill=function(t,src){if(t.kind!=='mon'||t.dead||!PTY.id)return _k(t,src);KILLCTX={t,near:partyNear()};try{return _k(t,src)}finally{KILLCTX=null}}}
+gainExp=function(b,j){if(KILLCTX&&KILLCTX.near.length&&NET.mc){const L=KILLCTX.near,n=L.length+1,bonus=1+.1*(n-1);const sb=Math.max(1,Math.round(b*bonus/n)),sj=Math.max(0,Math.round(j*bonus/n));
+    NET.mc.send({t:'pexp',k:NET.key,n:CH.name,pid:PTY.id,b:sb,j:sj,to:L.map(e=>e.key)});return _gainExpRaw(sb,sj)}return _gainExpRaw(b,j)};
+{const _da=dropAt;dropAt=function(x,y,id,rar){const g=_da(x,y,id,rar);if(KILLCTX&&KILLCTX.near.length&&g&&g.obj&&(g.obj.rar||0)>=3){const L=[[CH.name,null]].concat(KILLCTX.near.map(e=>[e.name,e])).map(([n,e])=>[n,1+Math.floor(Math.random()*100),e]);L.sort((a,b)=>b[1]-a[1]);const w=L[0];const nm=itemName(g.obj);
+    if(NET.mc)NET.mc.send({t:'roll',k:NET.key,n:CH.name,pid:PTY.id,item:nm,r:L.map(x=>[x[0],x[1]]),win:w[0]});log('🎲 ทอยเต๋า '+nm+': '+L.map(x=>x[0]+' '+x[1]).join(' · ')+' → '+w[0]+' ได้รับ','party');
+    if(w[2]){W.items=W.items.filter(q=>q!==g);DB.mailSend(w[0],0,[g.obj],'ของจากการทอยเต๋าในปาร์ตี้').catch(err=>{W.items.push(g);toast('ส่งของให้ '+w[0]+' ไม่สำเร็จ · ของตกที่พื้นแทน')})}}return g}}
+/* party chat: /p ข้อความ */
+{const _cs=chatSend;chatSend=function(raw){let s=String(raw||'').trim();let ch=null;if(/^\/p\s+/i.test(s)){ch='p';s=s.replace(/^\/p\s+/i,'')}else if(/^\/(gu|กิลด์)\s+/i.test(s)){ch='gu';s=s.replace(/^\/(gu|กิลด์)\s+/i,'')}else if(!/^\//.test(s)&&(NET.mode==='p'||NET.mode==='gu'))ch=NET.mode;
+  if(!ch)return _cs(raw);s=chatClean(s).slice(0,100);if(!s)return;const now=performance.now();if(now-NET.chatT<1200){toast('พิมพ์เร็วเกินไป รอสักครู่');return}NET.chatT=now;
+  if(ch==='p'){if(!PTY.id){toast('ยังไม่มีปาร์ตี้');return}wsend({t:'c',ch:'p',pid:PTY.id,s});log('[ปาร์ตี้] '+CH.name+': '+s,'cpa');return}
+  if(!GUILD.ch){toast('ยังไม่มีกิลด์');return}GUILD.ch.send({t:'c',ch:'gu',k:NET.key,n:CH.name,s});log('[กิลด์] '+CH.name+': '+s,'cgu')}}
+(function(){const mb=$('chatMode');if(!mb)return;const L=[['m','แมพ'],['g','ทั่วไป'],['p','ปาร์ตี้'],['gu','กิลด์']];mb.onclick=e=>{e.stopPropagation();const av=L.filter(x=>x[0]==='m'||x[0]==='g'||(x[0]==='p'&&PTY.id)||(x[0]==='gu'&&GUILD.g));let i=av.findIndex(x=>x[0]===NET.mode);const n=av[(i+1)%av.length];NET.mode=n[0];mb.textContent=n[1]}})();
+/* ---------- gifts: send items/coins by mail ---------- */
+mkWin('wGift','ส่งของ / เงิน','left:50%;top:8%;width:min(400px,95vw);transform:translateX(-50%)');
+let GIFT={to:'',sel:{},coins:0};
+function openGift(to){GIFT={to:to||'',sel:{},coins:0};openWin('wGift')}
+function giftable(){return CH.inv.map((s,i)=>({s,i})).filter(o=>ITEMS[o.s.id]&&!o.s.lock)}
+function rGift(){const L=giftable();let h='<label class="muted" style="font-size:12px">ส่งถึง (ชื่อตัวละคร)</label><input id="gTo" type="text" maxlength="16" value="'+esc(GIFT.to)+'" style="width:100%;box-sizing:border-box;margin:2px 0 6px">'+
+  '<label class="muted" style="font-size:12px">เหรียญ (มี '+CH.coins.toLocaleString()+')</label><input id="gCoin" type="number" min="0" max="'+CH.coins+'" value="'+(GIFT.coins||0)+'" style="width:100%;box-sizing:border-box;margin:2px 0 6px">'+
+  '<div class="muted" style="font-size:12px;margin:2px 0">เลือกของ (สูงสุด 10 รายการ · ของที่สวมอยู่ต้องถอดก่อน)</div><div style="max-height:38vh;overflow:auto;border:1px solid #ffffff14;border-radius:6px">';
+  L.forEach(({s,i})=>{const on=GIFT.sel[i]!=null,st=s.n>1||['use','etc','card'].includes(ITEMS[s.id].t);h+='<div class="gift-li'+(on?' on':'')+'"><img src="'+iconURL(s.id)+'" alt=""><div style="font-size:12.5px"><b style="color:'+itemColor(s)+'">'+esc(itemName(s))+'</b>'+(st?' <span class="muted">×'+s.n+'</span>':'')+'</div><div>'+(on&&st?'<input type="number" min="1" max="'+s.n+'" value="'+GIFT.sel[i]+'" data-gq="'+i+'"> ':'')+'<button class="btn sm '+(on?'':'ghost')+'" type="button" data-gs="'+i+'">'+(on?'✓':'เลือก')+'</button></div></div>'});
+  if(!L.length)h+='<p class="muted" style="padding:8px">กระเป๋าว่าง</p>';
+  h+='</div><p class="muted" style="font-size:11.5px;margin:6px 0">ของจะถูกส่งทางไปรษณีย์ ผู้รับได้รับทันทีเมื่อออนไลน์ด้วยตัวละครนั้น</p><button class="btn" type="button" data-gsend style="width:100%">🎁 ส่ง</button>';$('wGiftB').innerHTML=h}
+$('wGiftB').addEventListener('input',e=>{if(e.target.id==='gTo')GIFT.to=e.target.value;if(e.target.id==='gCoin')GIFT.coins=Math.max(0,Math.min(CH.coins,Math.floor(+e.target.value||0)));const q=e.target.dataset.gq;if(q!=null){const s=CH.inv[+q];GIFT.sel[q]=Math.max(1,Math.min(s.n,Math.floor(+e.target.value||1)))}});
+$('wGiftB').addEventListener('click',async e=>{const s=e.target.closest('[data-gs]');if(s){const i=+s.dataset.gs;if(GIFT.sel[i]!=null)delete GIFT.sel[i];else{if(Object.keys(GIFT.sel).length>=10){toast('เลือกได้สูงสุด 10 รายการ');return}GIFT.sel[i]=CH.inv[i].n>1?1:1}rGift();return}
+  if(!e.target.closest('[data-gsend]'))return;const to=GIFT.to.trim(),coins=GIFT.coins|0;const sel=Object.keys(GIFT.sel).map(i=>({i:+i,s:CH.inv[+i],n:GIFT.sel[i]})).filter(o=>o.s);
+  if(!to){toast('ใส่ชื่อผู้รับ');return}if(nameKey(to)===nameKey(CH.name)){toast('ส่งให้ตัวเองไม่ได้');return}if(!coins&&!sel.length){toast('เลือกของหรือใส่จำนวนเหรียญ');return}if(coins>CH.coins){toast('เหรียญไม่พอ');return}
+  const items=sel.map(o=>{const st=['use','etc','card'].includes(ITEMS[o.s.id].t);return st?{id:o.s.id,n:o.n}:JSON.parse(JSON.stringify(o.s))});const b=e.target.closest('[data-gsend]');b.disabled=true;b.textContent='กำลังส่ง…';
+  try{const t=await DB.mailSend(to,coins,items,'');CH.coins-=coins;const objs=sel.map(o=>o.s);for(const o of sel){const st=['use','etc','card'].includes(ITEMS[o.s.id].t);const idx=CH.inv.indexOf(o.s);if(idx<0)continue;if(st)removeItem(CH,idx,o.n);else CH.inv.splice(idx,1)}
+    log('🎁 ส่งถึง '+t.name+': '+(coins?coins.toLocaleString()+' เหรียญ ':'')+items.map(x=>ITEMS[x.id].n+(x.n>1?' ×'+x.n:'')).join(', '),'loot');toast('ส่งให้ '+t.name+' แล้ว');saveAll();hudUpdate(true);closeWin('wGift');
+    const o=onlineByName(t.name);if(o)wsend({t:'mailping',to:o.key})}
+  catch(err){toast('ส่งไม่สำเร็จ: '+(err.message||err));b.disabled=false;b.textContent='🎁 ส่ง'}});
+/* receive */
+let MAILBUSY=false;
+async function mailCheck(){if(MAILBUSY||!INGAME||!CH||!AUTH.ready)return;MAILBUSY=true;try{const L=(await DB.inbox()).filter(m=>nameKey(m.to_name)===nameKey(CH.name));
+    for(const m of L){if(!(await DB.claim(m.id)))continue;CH.coins+=m.coins|0;for(const it of m.items||[]){if(!it||!ITEMS[it.id])continue;if(['use','etc','card'].includes(ITEMS[it.id].t))addItem(CH,it.id,it.n||1);else{const o=Object.assign({},it);o.n=1;addItem(CH,it.id,1,o)}}
+      const txt=(m.coins?(m.coins|0).toLocaleString()+' เหรียญ ':'')+(m.items||[]).map(x=>ITEMS[x.id]?ITEMS[x.id].n+(x.n>1?' ×'+x.n:''):'').join(', ');log('📬 ได้รับจาก '+m.from_name+': '+txt+(m.note?' ('+m.note+')':''),'loot');banner('ได้รับของ','จาก '+m.from_name);SFX.win&&SFX.win()}
+    if(L.length){saveAll();hudUpdate(true)}}catch(e){console.warn('mail',e)}MAILBUSY=false}
+NET_H.push(p=>{if(p.t==='mailping'){if(p.to===NET.key){mailCheck();setTimeout(mailCheck,1500);setTimeout(mailCheck,4000)}return true}return false});
+let MAILW=false;setInterval(()=>{if(INGAME&&AUTH.ready){if(!MAILW){MAILW=true;try{DB.watchMail(()=>mailCheck())}catch(e){}mailCheck()}}},2500);
+setInterval(()=>{if(INGAME)mailCheck()},60000);
+{const _em=enterMap;enterMap=function(...a){const r=_em(...a);setTimeout(()=>{mailCheck();guildLoad()},800);return r}}
+/* ---------- guild ---------- */
+const GUILD={g:null,me:null,list:[],inv:[],ch:null,loaded:'',busy:false};
+const GUILD_COST=50000;
+mkWin('wGuild','กิลด์','left:50%;top:8%;width:min(420px,95vw);transform:translateX(-50%)');
+async function guildLoad(force){if(!INGAME||!CH||!AUTH.ready)return;if(!force&&GUILD.loaded===CH.name)return;GUILD.loaded=CH.name;try{const G=await DB.myGuild();const old=GUILD.g&&GUILD.g.id;GUILD.g=G&&G.g;GUILD.me=G&&G.me;GUILD.list=G?G.list:[];GUILD.inv=G?[]:await DB.gInvites();
+    if((GUILD.g&&GUILD.g.id)!==old){if(GUILD.ch){GUILD.ch.close();GUILD.ch=null}if(GUILD.g){const c=netChan('guild:'+GUILD.g.id,NET.key||AUTH.uid);if(c){GUILD.ch=c;c.onMsg(guildMsg);c.track({n:CH.name})}}if(NET.mc)NET.mc.track(netMe())}}
+  catch(e){console.warn('guild',e)}guildBtn();if($('wGuild').classList.contains('show'))rGuild()}
+function guildMsg(p){if(!p)return;if(p.t==='c'&&p.ch==='gu'){if(p.k!==NET.key)log('[กิลด์] '+String(p.n).slice(0,16)+': '+chatClean(String(p.s||'').slice(0,120)),'cgu')}else if(p.t==='gref')guildLoad(true)}
+NET_H.push(p=>{if(p.t==='ginv'){if(p.to===nameKey(CH.name)){new Promise(r=>setTimeout(r,900)).then(()=>guildLoad(true)).then(()=>{if(GUILD.inv.length){toast('🏯 '+p.n+' ชวนท่านเข้ากิลด์ «'+p.gn+'» · เปิดหน้ากิลด์เพื่อตอบรับ');guildBtn()}})}return true}return false});
+async function guildInvite(name){if(!GUILD.g){toast('ท่านยังไม่มีกิลด์');return}try{const t=await DB.gInvite(GUILD.g.id,name);wsend({t:'ginv',to:nameKey(t.name),gn:GUILD.g.name});toast('ส่งคำเชิญเข้ากิลด์ถึง '+t.name+' แล้ว');closeWin('wPlayer')}catch(e){toast('เชิญไม่สำเร็จ: '+(e.message||e))}}
+function guildBtn(){const b=$('btnGuild');if(b)b.classList.toggle('dot',!GUILD.g&&GUILD.inv.length>0)}
+function rGuild(){const B=$('wGuildB');if(!GUILD.g){let h='<p class="muted" style="font-size:12.5px;margin:0 0 8px">ยังไม่ได้อยู่ในกิลด์</p>';
+    if(GUILD.inv.length)h+='<div class="detail"><b>คำเชิญเข้ากิลด์</b>'+GUILD.inv.map(i=>'<div class="row" style="justify-content:space-between;margin-top:6px"><span>«'+esc(i.gname)+'» จาก '+esc(i.from_name)+'</span><span><button class="btn sm" type="button" data-gj="'+i.guild_id+'">เข้าร่วม</button> <button class="btn ghost sm" type="button" data-gd="'+i.guild_id+'">ปฏิเสธ</button></span></div>').join('')+'</div>';
+    h+='<div class="detail" style="margin-top:8px"><b>ตั้งกิลด์ใหม่</b><p class="muted" style="font-size:12px;margin:4px 0">ค่าตั้งกิลด์ '+GUILD_COST.toLocaleString()+' เหรียญ · ชื่อ 2–12 ตัวอักษร · สมาชิกสูงสุด 30 คน</p><input id="gName" type="text" maxlength="12" placeholder="ชื่อกิลด์" style="width:100%;box-sizing:border-box"><button class="btn" type="button" data-gc style="margin-top:6px;width:100%" '+(CH.coins>=GUILD_COST?'':'disabled')+'>🏯 ตั้งกิลด์</button></div>';B.innerHTML=h;return}
+  const lead=GUILD.g.leader_key===nameKey(CH.name);const on=new Set(Object.values(NET.online).map(o=>nameKey(o.n)).concat([nameKey(CH.name)]));
+  let h='<div style="font-size:16px"><b style="color:#ffd98a">«'+esc(GUILD.g.name)+'»</b> <span class="muted">สมาชิก '+GUILD.list.length+'/30</span></div><p class="muted" style="font-size:12px;margin:2px 0 8px">คุยในกิลด์: พิมพ์ /gu ข้อความ หรือกดปุ่มช่องแชทให้เป็น "กิลด์"</p>';
+  h+='<div class="list">'+GUILD.list.map(m=>'<div class="li" style="grid-template-columns:1fr auto"><div><b>'+(on.has(m.name_key)?'🟢 ':'⚪ ')+esc(m.name)+(m.role==='leader'?' 👑':'')+'</b></div>'+(lead&&m.role!=='leader'?'<button class="btn ghost sm" type="button" data-gk="'+esc(m.name_key)+'">นำออก</button>':'<span></span>')+'</div>').join('')+'</div>';
+  h+='<div class="row" style="gap:6px;margin-top:8px"><input id="gInv" type="text" maxlength="16" placeholder="ชื่อผู้เล่นที่จะชวน" style="flex:1;min-width:0"><button class="btn sm" type="button" data-gi>ชวน</button></div>';
+  h+='<button class="btn ghost sm" type="button" data-gl style="margin-top:10px">'+(lead?'ยุบกิลด์':'ออกจากกิลด์')+'</button>';B.innerHTML=h}
+$('wGuildB').addEventListener('click',async e=>{const t=e.target.closest('[data-gj],[data-gd],[data-gc],[data-gk],[data-gi],[data-gl]');if(!t||GUILD.busy)return;GUILD.busy=true;
+  try{if(t.dataset.gj){await DB.gJoin(+t.dataset.gj);toast('เข้าร่วมกิลด์แล้ว');await guildLoad(true);if(GUILD.ch)setTimeout(()=>GUILD.ch&&GUILD.ch.send({t:'gref'}),600);if(GUILD.ch)GUILD.ch.send({t:'c',ch:'gu',k:NET.key,n:CH.name,s:'เข้าร่วมกิลด์แล้ว!'})}
+    else if(t.dataset.gd){await DB.gDecline(+t.dataset.gd);await guildLoad(true)}
+    else if(t.dataset.gc!=null){const n=($('gName').value||'').trim();if(n.length<2||n.length>12)throw new Error('ชื่อกิลด์ 2–12 ตัวอักษร');if(chatClean(n)!==n)throw new Error('ชื่อกิลด์มีคำไม่เหมาะสม');if(CH.coins<GUILD_COST)throw new Error('เหรียญไม่พอ');
+      await DB.gCreate(n);CH.coins-=GUILD_COST;saveAll();hudUpdate(true);banner('ตั้งกิลด์สำเร็จ','«'+n+'»');await guildLoad(true)}
+    else if(t.dataset.gk){if(confirmKey!=='gk'+t.dataset.gk){confirmKey='gk'+t.dataset.gk;toast('กดอีกครั้งเพื่อยืนยันนำออก');GUILD.busy=false;return}confirmKey=null;await DB.gKick({g:GUILD.g},t.dataset.gk);if(GUILD.ch)GUILD.ch.send({t:'gref'});await guildLoad(true)}
+    else if(t.dataset.gi!=null){const n=($('gInv').value||'').trim();if(n)await guildInvite(n)}
+    else if(t.dataset.gl!=null){if(confirmKey!=='gl'){confirmKey='gl';toast('กดอีกครั้งเพื่อยืนยัน');GUILD.busy=false;return}confirmKey=null;const G={g:GUILD.g};if(GUILD.ch)GUILD.ch.send({t:'gref'});await DB.gLeave(G);toast('ออกจากกิลด์แล้ว');await guildLoad(true)}}
+  catch(err){toast(err.message||String(err))}GUILD.busy=false});
+(function(){const ab=$('autobar');if(!ab)return;const b=document.createElement('button');b.type='button';b.id='btnGuild';b.textContent='🏯 กิลด์';b.onclick=e=>{e.stopPropagation();openWin('wGuild');guildLoad(true)};const on=$('btnOnline');ab.insertBefore(b,on?on.nextSibling:ab.firstChild)})();
+setInterval(()=>{if(INGAME&&AUTH.ready&&GUILD.loaded!==CH.name)guildLoad()},3000);
+
+/* ===== มอนสเตอร์ร่วมกัน (แบบ "เจ้าบ้าน"): คนที่อยู่ในแมพก่อนคุมมอนทั้งแมพ ส่งสถานะให้คนอื่น · คนอื่นตี → ส่งดาเมจไปให้เจ้าบ้าน · คนตีตัวสุดท้ายได้ EXP/ของ ===== */
+const SH={role:'solo',host:null,map:new Map(),sent:new Map(),mirroring:false,priv:0,dT:0,fT:0,reqT:0,outT:0,out:[],lastFull:0,mapId:null};
+const SH_DT=.3,SH_FULL=3;
+function shOK(){return netMapOK()&&W.mapId!=='hulao'&&!!NET.mc}
+function shShared(m){return m.kind==='mon'&&!m.priv&&!m.arena&&!m.sqBoss}
+function shReset(){SH.role='solo';SH.host=null;SH.map.clear();SH.sent.clear();SH.out=[];SH.mapId=W&&W.mapId}
+const kpre=k=>String(k||'').slice(0,6);
+/* ---------- host election: earliest join time in the map ---------- */
+function shElect(){if(!shOK()||!NET.peers.size)return NET.key;let best=NET.key,bj=NET.joinT||0;for(const e of NET.peers.values()){const j=e.j||9e15;if(j<bj||(j===bj&&e.key<best)){bj=j;best=e.key}}return best}
+function shSetRole(){if(SH.mapId!==W.mapId)shReset();const h=shOK()?shElect():NET.key;const role=!shOK()||!NET.peers.size?'solo':h===NET.key?'host':'client';
+  if(role===SH.role&&h===SH.host)return;const was=SH.role;SH.role=role;SH.host=h;
+  if(role==='client'){// drop my own shared monsters; wait for host snapshot
+    W.ents=W.ents.filter(e=>!(e.kind==='mon'&&!e.net&&shShared(e)));if(W.P.act&&W.P.act.t&&W.P.act.t.kind==='mon'&&!W.ents.includes(W.P.act.t))W.P.act=null;SH.map.clear();for(const e of W.ents)if(e.net)SH.map.set(e.id,e);SH.reqT=0;
+    if(was!=='client')log('เข้าร่วมแมพเดียวกับผู้เล่นอื่น · มอนสเตอร์ในแมพนี้เห็นร่วมกันแล้ว','sys')}
+  else{// host or solo: mirrors become real monsters
+    let n=0;for(const m of W.ents)if(m.net){m.net=false;m.temp=!!m.ntemp;m.target=null;m.state='idle';if(m.dead)m.respawnT=m.def.boss?1e9:rnd(3,8);n++}SH.map.clear();if(n||was==='client')shTopUp();SH.fT=0}}
+function shTopUp(){if(!W.M.spawns)return;for(const [mid,n] of W.M.spawns){const have=W.ents.filter(e=>e.kind==='mon'&&e.mid===mid&&!e.temp&&shShared(e)).length;for(let k=have;k<n;k++)spawnMon(mid)}}
+/* ---------- spawning rules ---------- */
+{const _sm=spawnMon;spawnMon=function(...a){const m=_sm(...a);if(!SH.mirroring&&(SH.priv>0||SH.role==='client'))m.priv=true;return m}}
+{const _sq=sqSpawn;sqSpawn=function(...a){SH.priv++;try{return _sq(...a)}finally{SH.priv--}}}
+{const _hs=horrorStep;horrorStep=function(...a){SH.priv++;try{return _hs(...a)}finally{SH.priv--}}}
+/* client: map-wide spawners (field boss, MVP, bride, invasion) belong to the host */
+{const _st=step;step=function(dt){if(SH.role!=='client'||!W||!W.M)return _st(dt);const M=W.M,b=M.boss,v=M.mvp,br=M.bride,inv=W.inv,fake={g:{dead:false,x:0,y:0}};M.boss=null;M.mvp=null;M.bride=null;if(!inv)W.inv=fake;
+  try{return _st(dt)}finally{M.boss=b;M.mvp=v;M.bride=br;if(W.inv===fake)W.inv=null}}}
+/* host: monsters near any player stay awake; remote players are valid targets */
+{const _mf=monFar;monFar=function(e,P){if(!_mf(e,P))return false;if(SH.role!=='host')return true;for(const p of NET.peers.values())if(!_mf(e,p))return false;return true}}
+{const _ap=alivePC;alivePC=function(){const L=_ap();if(SH.role!=='host'||!SH.inMon)return L;for(const e of NET.peers.values())if(!e.dead)L.push(e);return L}}
+{const _dv=derive;derive=function(e){if(e&&e.kind==='rp'){const s=e.st||[5,5,200];return {def:s[0],flee:s[1],maxHp:s[2],mdef:0,hit:0,crit:0,atkMin:1,atkMax:1,speed:150,range:40,delay:1,S:{vit:1,int:1},expMul:1}}return _dv(e)}}
+{const _nm=netMe;netMe=function(){const o=_nm();try{const D=derive(W.P);o.st=[D.def|0,D.flee|0,D.maxHp|0]}catch(e){}return o}}
+{const _jm=netJoinMap;netJoinMap=function(){shReset();return _jm()}}
+/* ---------- damage routing ---------- */
+{const _ad=applyDamage;applyDamage=function(t,dmg,src,crit,kind){
+  if(t&&t.kind==='rp'){if(t.dead)return;if(SH.role==='host'&&NET.mc)NET.mc.send({t:'hurt',to:t.key,i:src&&src.id,d:Math.round(dmg),c:crit?1:0,kd:kind||''});t.anim.hit=.18;emit('dmg',{t,dmg,crit,src,kind});return}
+  if(t&&t.net){if(t.dead)return;t.anim.hit=.18;t.lastHurt=W.time;emit('dmg',{t,dmg,crit,src,kind});t.hp=Math.max(1,t.hp-dmg);if(src&&(src.kind==='pc'||src.kind==='pet'))SH.out.push([t.id,Math.round(dmg)]);return}
+  return _ad(t,dmg,src,crit,kind)}}
+{const _um=updMon;updMon=function(m,dt){if(!m.net){SH.inMon=true;try{return _um(m,dt)}finally{SH.inMon=false}}if(m.dead)return;const dx=(m.tx==null?m.x:m.tx)-m.x,dy=(m.ty==null?m.y:m.ty)-m.y,d=Math.hypot(dx,dy);if(d>400){m.x=m.tx;m.y=m.ty}else if(d>1){const k=Math.min(1,dt*7);m.x+=dx*k;m.y+=dy*k;if(d>5)m.anim.walk=.15}if(m.ta!=null)m.ang=m.ta}}
+function shDeathNoReward(m){m.dead=true;m.target=null;m.path=[];emit('mondie',{t:m});const d=m.def;if(!m.temp)m.respawnT=(d.boss||m.floorBoss)?1e9:rnd(8,14);
+  if(W.M.mvp&&m.mid===W.M.mvp.id){ACC.mvp=ACC.mvp||{};ACC.mvp[m.mid]=Date.now()+(W.M.mvp.min||30)*60000;emit('bossdead',{t:m,min:W.M.mvp.min});saveAll()}
+  else if(m.mid==='bride'){ACC.brideNext=Date.now()+(d.respawnMin+rnd(-d.respawnVar,d.respawnVar))*60000;emit('bossdead',{t:m})}
+  else if(d.boss&&!m.floorBoss){ACC.bossNext=Date.now()+(d.respawnMin+rnd(-d.respawnVar,d.respawnVar))*60000;emit('bossdead',{t:m});saveAll()}}
+/* host's own kills → tell everyone */
+{const _k=kill;kill=function(t,src){const was=t.dead;const r=_k(t,src);if(!was&&t.dead&&t.kind==='mon'&&SH.role==='host'&&shShared(t)&&!t.net&&NET.mc)NET.mc.send({t:'mdie',i:t.id,by:NET.key,bn:CH.name});return r}}
+/* ---------- snapshots ---------- */
+function shFlags(m){return (m.dead?1:0)|(m.dormant?2:0)|(m.anim&&m.anim.atk>.2?4:0)}
+function shTk(m){const t=m.target;if(!t||t.dead)return '';return t===W.P?kpre(NET.key):t.kind==='rp'?kpre(t.key):''}
+function shFull(){const L=[];for(const m of W.ents){if(!shShared(m)||m.net)continue;if(m.dead&&(m.temp||m.def.boss)&&(m.deadT||0)>2)continue;const ex={};if(m.champ)ex.c=1;if(m.isMvp)ex.v=1;if(m.invader)ex.iv=1;if(m.temp)ex.tp=1;if(m.mul)ex.mu=m.mul;
+    L.push([m.id,m.mid,Math.round(m.x),Math.round(m.y),Math.round(m.hp),Math.round(m.maxHp),shFlags(m),Object.keys(ex).length?ex:0]);SH.sent.set(m.id,'')}
+  NET.mc.send({t:'mf',k:NET.key,l:L});SH.lastFull=performance.now()}
+function shDelta(){const P=[W.P].concat([...NET.peers.values()]);const L=[];for(const m of W.ents){if(!shShared(m)||m.net)continue;if(!P.some(p=>Math.abs(p.x-m.x)<2400&&Math.abs(p.y-m.y)<2000))continue;
+    const e=[m.id,Math.round(m.x),Math.round(m.y),Math.round(m.hp),Math.round((m.ang||0)*100),shFlags(m),shTk(m)];const sig=e.slice(1).join(',');if(SH.sent.get(m.id)===sig)continue;SH.sent.set(m.id,sig);L.push(e)}
+  if(L.length)NET.mc.send({t:'md',k:NET.key,l:L})}
+function shApply(e,full){let m=SH.map.get(e[0]);
+  if(full){const [id,mid,x,y,hp,mx,fl,ex]=e;if(!MONS[mid])return;if(!m){SH.mirroring=true;try{m=spawnMon(mid,x,y,true,ex&&ex.mu||null)}finally{SH.mirroring=false}m.id=id;m.net=true;SH.map.set(id,m)}
+    m.ntemp=!!(ex&&ex.tp);m.temp=false;m.champ=!!(ex&&ex.c);m.isMvp=!!(ex&&ex.v);m.invader=!!(ex&&ex.iv);m.maxHp=mx;m.tx=x;m.ty=y;if(!m.seenOnce){m.x=x;m.y=y;m.seenOnce=1}shState(m,hp,fl);return}
+  if(!m){if(performance.now()-SH.reqT>1500){SH.reqT=performance.now();NET.mc.send({t:'mreq',k:NET.key})}return}
+  m.tx=e[1];m.ty=e[2];m.ta=e[4]/100;shState(m,e[3],e[5]);m.target=e[6]&&e[6]===kpre(NET.key)?W.P:null}
+function shState(m,hp,fl){const dead=!!(fl&1);if(dead&&!m.dead){m.dead=true;m.deadT=0;m.target=null;m.hp=0}else if(!dead&&m.dead){m.dead=false;m.deadT=0;m.x=m.tx;m.y=m.ty;emit('spawn',{t:m})}if(!dead)m.hp=Math.max(m.dead?0:1,hp);m.dormant=!!(fl&2);if(fl&4&&!(m.anim.atk>0))m.anim.atk=.28;m.respawnT=1e9}
+NET_H.push(p=>{
+  if(p.t==='mf'){if(SH.role!=='client'||p.k!==SH.host)return true;const seen=new Set();for(const e of p.l){shApply(e,true);seen.add(e[0])}for(const [id,m] of SH.map)if(!seen.has(id)){SH.map.delete(id);W.ents=W.ents.filter(x=>x!==m)}return true}
+  if(p.t==='md'){if(SH.role!=='client'||p.k!==SH.host)return true;for(const e of p.l)shApply(e,false);return true}
+  if(p.t==='mreq'){if(SH.role==='host'&&performance.now()-SH.lastFull>800)shFull();return true}
+  if(p.t==='mh'){if(SH.role!=='host')return true;const rp=NET.peers.get(p.k);for(const [id,d] of p.h||[]){const m=W.ents.find(x=>x.id===id&&x.kind==='mon');if(!m||m.dead||m.net)continue;const dmg=Math.max(0,Math.min(999999,d|0));
+      m.hp-=dmg;m.anim.hit=.18;m.lastHurt=W.time;emit('dmg',{t:m,dmg,src:rp||null});if(rp&&(!m.target||m.target.dead))m.target=rp;if(m.dormant)m.dormant=false;
+      if(m.hp<=0){m.hp=0;shDeathNoReward(m);NET.mc.send({t:'mdie',i:m.id,by:p.k,bn:p.n||(rp&&rp.name)||''})}}return true}
+  if(p.t==='mdie'){const m=SH.map.get(p.i);if(!m)return true;if(p.by===NET.key){if(!m.dead){m.hp=0;m.net=false;try{kill(m,W.P)}finally{m.net=true}m.respawnT=1e9;m.deadT=0}}else if(!m.dead){m.dead=true;m.deadT=0;m.target=null;emit('mondie',{t:m});m.respawnT=1e9}return true}
+  if(p.t==='hurt'){if(p.to!==NET.key||!W.P||W.P.dead)return true;const m=SH.map.get(p.i);if(m)m.anim.atk=.28;applyDamage(W.P,p.d|0,m||null,!!p.c,p.kd||undefined);return true}
+  return false});
+/* ---------- tick ---------- */
+{const _st=step;step=function(dt){const r=_st(dt);try{shTick(dt)}catch(e){console.error(e)}return r}}
+function shTick(dt){if(!INGAME||!W||!W.P)return;shSetRole();if(!NET.mc)return;
+  if(SH.role==='client'){SH.outT-=dt;if(SH.out.length&&SH.outT<=0){SH.outT=.1;NET.mc.send({t:'mh',k:NET.key,n:CH.name,h:SH.out.splice(0,40)})}
+    if(!SH.map.size&&performance.now()-SH.reqT>2000){SH.reqT=performance.now();NET.mc.send({t:'mreq',k:NET.key})}return}
+  if(SH.role!=='host')return;SH.dT-=dt;SH.fT-=dt;if(SH.fT<=0){SH.fT=SH_FULL;shFull();SH.dT=SH_DT;return}if(SH.dT<=0){SH.dT=SH_DT;shDelta()}}
 
 /* ===== Mobile / iOS: layout fixes, rotate hint, persistent storage ===== */
 (function(){const st=document.createElement('style');st.textContent=`
@@ -4474,14 +4772,19 @@ html,body{overscroll-behavior:none;-webkit-touch-callout:none}
 #g,#c{touch-action:none;-webkit-user-select:none;user-select:none}
 .win{max-height:calc(100dvh - 12px)!important}
 @media (max-height:520px){.win.show{top:max(4px,env(safe-area-inset-top,0px))!important;bottom:auto}.win .wb{max-height:calc(100dvh - 56px)}
-  #autobar{bottom:auto!important;top:150px;right:max(6px,env(safe-area-inset-right,0px))!important}#autobar button{padding:4px 6px;font-size:10.5px}#autoMsg{top:6px}}
+  #autobar{top:auto!important;bottom:116px!important;right:max(6px,env(safe-area-inset-right,0px))!important;gap:3px!important;padding:3px!important}#autobar button{width:36px;height:34px;padding:0!important;font-size:16px!important;display:flex;align-items:center;justify-content:center;gap:1px}#autobar button .t{display:none}#autobar #btnOnline{width:auto;padding:0 6px!important;font-size:13px!important}#autoMsg{top:6px}
+  #status{width:188px!important;padding:4px 7px!important;gap:0!important}#status .por{display:none!important}#status .nm{font-size:12px}#status .nm span{font-size:10.5px}#status .lv{font-size:10px;margin:0}#status .bar{height:11px!important;margin:2px 0}#status .bar span{font-size:9px!important;line-height:10px!important}
+  #status .exp{font-size:8.5px!important;gap:3px}#status .exp .bar{height:4px!important;margin:1px 0}#status .money{font-size:10.5px!important;margin-top:1px}}
+@media (pointer:coarse){#log,#chatTabs,#status,#mini,#partyhud,#buffs,#target,.win header,#menu,#hotbar,#autobar{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}#chatIn{-webkit-user-select:text!important;user-select:text!important}}
 #rotHint{position:fixed;inset:0;z-index:2147483600;background:#120806;color:#ffe9a8;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;font:600 18px "Noto Sans Thai",sans-serif;padding:24px}
 #rotHint .ph{width:70px;height:120px;border:4px solid #e0b050;border-radius:14px;margin-bottom:22px;animation:rot 1.8s ease-in-out infinite}
 @keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
 @media (orientation:portrait) and (max-width:820px){body.ingame #rotHint{display:flex}}`;document.head.appendChild(st);
   const r=document.createElement('div');r.id='rotHint';r.innerHTML='<div class="ph"></div><div>หมุนโทรศัพท์เป็นแนวนอน<br><small style="opacity:.7;font-weight:400">เกมเล่นได้ดีที่สุดในแนวนอน</small></div>';document.body.appendChild(r);
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-  setInterval(()=>{if(INGAME)saveAll()},15000)})();
+  setInterval(()=>{if(INGAME)saveAll()},15000);
+  /* autobar: split icon/label so small screens show icons only */
+  const ab=$('autobar');if(ab)for(const b of ab.querySelectorAll('button')){if(b.id==='btnOnline'||b.querySelector('.t'))continue;const t=b.textContent.trim(),i=t.indexOf(' ');if(i<0)continue;b.title=b.title||t.slice(i+1);b.setAttribute('aria-label',t.slice(i+1));b.innerHTML='<span>'+t.slice(0,i)+'</span><span class="t"> '+t.slice(i+1)+'</span>'}})();
 
 authBoot();
 
