@@ -593,12 +593,12 @@ Object.assign(ITEMS,{
 });
 const CARDS={spider:{luk:3,crit:2},drake:{fire:8},skeleton:{def:4},hound:{agi:3,aspd:5},ox:{str:3,atk:10},general:{def:8,vit:3,hpPct:8},goldskel:{atkPct:6,luk:2}};
 for(const k in CARDS){ITEMS['card_'+k]={n:'การ์ด'+(k==='goldskel'?'ทหารผีทองคำ':''),t:'card',price:500,bonus:CARDS[k],mon:k,ic:['card','#c08af0'],d:''}}
-const STAT_LABEL={atk:'ATK',atkPct:'ATK %',str:'STR',agi:'AGI',vit:'VIT',int:'INT',dex:'DEX',luk:'LUK',def:'DEF',hpPct:'HP สูงสุด %',leech:'ดูดเลือด %',aspd:'ความเร็วโจมตี %',crit:'คริติคอล %',fire:'ดาเมจไฟ +',spd:'ความเร็วเดิน %'};
+const STAT_LABEL={flee:'FLEE หลบหลีก',atk:'ATK',atkPct:'ATK %',str:'STR',agi:'AGI',vit:'VIT',int:'INT',dex:'DEX',luk:'LUK',def:'DEF',hpPct:'HP สูงสุด %',leech:'ดูดเลือด %',aspd:'ความเร็วโจมตี %',crit:'คริติคอล %',fire:'ดาเมจไฟ +',spd:'ความเร็วเดิน %'};
 const AFFIX=[
   {k:'atk',n:'คมกริบ',r:[3,16],slots:['weapon']},{k:'atkPct',n:'ดุดัน',r:[3,12],slots:['weapon','acc']},{k:'fire',n:'เพลิงกาฬ',r:[3,14],slots:['weapon']},
   {k:'leech',n:'กระหายเลือด',r:[1,5],slots:['weapon','acc']},{k:'aspd',n:'รวดเร็ว',r:[3,10],slots:['weapon','acc','shoes']},{k:'crit',n:'แม่นจุดตาย',r:[1,6],slots:['weapon','acc','head']},
   {k:'str',n:'แข็งแรง',r:[1,5]},{k:'agi',n:'ว่องไว',r:[1,5]},{k:'vit',n:'อึดทน',r:[1,5]},{k:'int',n:'ปราดเปรื่อง',r:[1,5]},{k:'dex',n:'แม่นยำ',r:[1,5]},{k:'luk',n:'โชคดี',r:[1,5]},
-  {k:'def',n:'มั่นคง',r:[1,6],slots:['armor','head','shoes','shield']},{k:'hpPct',n:'ยืนยาว',r:[3,12],slots:['armor','head','shield','acc']},{k:'spd',n:'ลมพัด',r:[4,12],slots:['shoes']}
+  {k:'def',n:'มั่นคง',r:[1,6],slots:['armor','head','shoes','shield']},{k:'hpPct',n:'ยืนยาว',r:[3,12],slots:['armor','head','shield','acc']},{k:'spd',n:'ลมพัด',r:[4,12],slots:['shoes']},{k:'flee',n:'พลิ้วไหว',r:[3,14],slots:['shoes','armor','head','acc']}
 ];
 const RARITY=[{n:'ธรรมดา',c:'#e8e4d8'},{n:'เวท',c:'#6a9aff'},{n:'หายาก',c:'#ffd84a'},{n:'ตำนาน',c:'#ff9a2a'}];
 const REFINE_RATE=[1,1,1,1,1,.85,.7,.55,.45,.35,.25,.18,.12];
@@ -945,7 +945,8 @@ function newChar(o){
     hot:[{t:'item',id:'hp_s'},null,null,null,null,null,null,null,null],sk:{bash:0,first_aid:0,endure:0,vitality:0},
     q:{i:0,acc:false,prog:{}},map:'town',x:3200,y:2510,bots:[],journal:[],created:Date.now()};
 }
-const expNeed=lv=>Math.round(30*Math.pow(lv,1.85));
+const EXP_HARD=.08;// หลังเลเวล 50 EXP ที่ต้องใช้เพิ่ม 8% ต่อเลเวล (Lv60 ×1.8 · Lv80 ×3.4 · Lv99 ×4.9)
+const expNeed=lv=>Math.round(30*Math.pow(lv,1.85)*(lv>50?1+(lv-50)*EXP_HARD:1));
 const jexpNeed=jl=>Math.round(22*Math.pow(jl,1.8)*(CH&&CH.job?(CH.job2?4:2.2):1));
 const JOB_MAX=10;
 const statCost=v=>Math.floor((v-1)/10)+2;
@@ -953,7 +954,7 @@ function eqBonus(ch){const b={};const add=B=>{for(const k in B)b[k]=(b[k]||0)+B[
 function buffSum(pc){const b={aspd:1,atkMul:1,expMul:1,spd:0};for(const k in pc.buffs){const f=pc.buffs[k];['str','agi','int','def','spd'].forEach(s=>{if(f[s])b[s]=(b[s]||0)+f[s]});if(f.aspd)b.aspd*=f.aspd;if(f.atkMul)b.atkMul*=f.atkMul;if(f.expMul)b.expMul*=f.expMul}return b}
 function derive(pc){
   const bf=buffSum(pc);
-  if(pc.kind==='mon'){const d=pc.def,mu=pc.mul||{},lv=d.lv+(mu.lv||0),am=(mu.atk||1)*bf.atkMul;return {atkMin:d.atk[0]*am,atkMax:d.atk[1]*am,def:Math.round(d.def*(1+(mu.lv||0)*.05))+(bf.def||0),hit:10+lv*3,flee:5+lv*2,crit:0,delay:d.aspd/(mu.spd||1),speed:d.speed*(mu.spd||1)*(1+bf.spd/100),range:d.range,maxHp:pc.maxHp}}
+  if(pc.kind==='mon'){const d=pc.def,mu=pc.mul||{},lv=d.lv+(mu.lv||0),am=(mu.atk||1)*bf.atkMul;return {atkMin:d.atk[0]*am,atkMax:d.atk[1]*am,def:Math.round(d.def*(1+(mu.lv||0)*.05))+(bf.def||0),hit:Math.round((15+lv*1.25)*(d.boss?1.25:d.elite?1.1:1)),flee:5+lv*2,crit:d.boss?9:d.elite?6:4,delay:d.aspd/(mu.spd||1),speed:d.speed*(mu.spd||1)*(1+bf.spd/100),range:d.range,maxHp:pc.maxHp}}
   if(pc.ctrl==='bot'){const c=BOT_CLS[pc.cls],lv=CH.lv;const atk=(14+lv*3.6)*c.atkM*bf.atkMul;
     return {maxHp:Math.round((48+lv*15)*c.hpM),maxSp:30+lv*3,atkMin:atk*.88,atkMax:atk*1.12,def:Math.round((3+lv*.6)*c.defM)+(bf.def||0),hit:lv*2+15,flee:Math.round(lv*1.5+10),crit:pc.cls==='assassin'?15:3,delay:(c.delay||1.25)*bf.aspd,speed:150*(CH.riding?1.6:1)*(1+bf.spd/100),range:c.range}}
   const ch=pc.ch,b=eqBonus(ch),S={};STATK.forEach(k=>S[k]=ch.st[k]+(b[k]||0)+(bf[k]||0));
@@ -962,7 +963,7 @@ function derive(pc){
   const spdPct=(b.spd||0)+bf.spd;
   return {S,maxHp:Math.round((40+lv*12+S.vit*4+lv*S.vit*.3)*(1+vp*.04)*(1+(b.hpPct||0)/100)),maxSp:Math.round(10+lv*2.5+S.int*2.5),
     atkMin:(base+w*.9)*am,atkMax:(base+w*1.08)*am,atkShow:Math.round(base)+' + '+w,matk:Math.round(S.int*1.5+Math.pow(Math.floor(S.int/5),2)),
-    def:Math.round((b.def||0)+S.vit/2+(bf.def||0)),hit:lv+S.dex,flee:lv+S.agi,crit:Math.round((1+S.luk*.3+(b.crit||0))*10)/10,
+    def:Math.round((b.def||0)+S.vit/2+(bf.def||0)),hit:lv+S.dex,flee:lv+S.agi+(b.flee||0),crit:Math.round((1+S.luk*.3+(b.crit||0))*10)/10,
     delay:Math.max(.3,(1.45-S.agi*.014-S.dex*.004)*bf.aspd/(1+(b.aspd||0)/100)),speed:pc.boat?(pc.boat===2?250:300):150*(1+spdPct/100)*(ch.riding?1.6:1)*(pc.run&&pc.act&&pc.act.type==='move'?1.3:1)*(carriageOn(pc)?2.3:1),range:(()=>{const w=ch.eq.weapon&&ITEMS[ch.eq.weapon.id];const wt=w&&w.wt;return wt==='bow'?220:wt==='staff'||wt==='fan'?180:wt==='spear'?58:44})(),
     fire:b.fire||0,leech:b.leech||0,expMul:bf.expMul,b};
 }
@@ -1005,12 +1006,13 @@ function mons(){return W.ents.filter(e=>e.kind==='mon'&&!e.dead&&!e.dormant)}
 /* ---------- combat ---------- */
 function doAttack(a,t,mult,hitBonus,opt){
   opt=opt||{};const A=derive(a),T=derive(t);
-  const crit=a.kind==='pc'&&!opt.noCrit&&Math.random()*100<A.crit+(opt.critB||0);
-  const hc=clamp(80+A.hit+(hitBonus||0)-T.flee,5,97);
+  const monCrit=a.kind==='mon'&&t.kind!=='mon'&&!opt.noCrit&&Math.random()*100<Math.max(1,A.crit-(T.S?T.S.luk*.2:0));
+  const crit=(a.kind==='pc'&&!opt.noCrit&&Math.random()*100<A.crit+(opt.critB||0))||monCrit;
+  const hc=clamp(80+A.hit+(hitBonus||0)-T.flee,a.kind==='mon'?20:5,97);
   a.anim.atk=.28;a.ang=Math.atan2(t.y-a.y,t.x-a.x);
   if(!crit&&Math.random()*100>hc){emit('miss',{t});return 0}
   let raw=opt.magic&&A.matk!=null?(A.matk*2.1+((A.b&&A.b.atk)||0)*.8)*rnd(.92,1.08)*(mult||1):rnd(A.atkMin,A.atkMax)*(mult||1);if(crit)raw*=1.4;
-  let dmg=Math.max(1,Math.round(crit?raw:raw*100/(100+T.def*(opt.magic?1.5:3))));
+  let dmg=Math.max(1,Math.round(crit&&!monCrit?raw:raw*100/(100+T.def*(opt.magic?1.5:3))));if(monCrit)emit('float',{t,s:'คริติคอล!',c:'#ff5a3a'});
   if(A.fire&&t.kind==='mon')dmg+=Math.round(A.fire*(t.mid==='drake'?.3:1)*(t.def.fireWeak?2:1));
   if(t.kind==='mon'&&t.def.ghost&&a.kind==='pc'){const holy=a.buffs&&a.buffs.holy;const pure=A.fire>0||opt.kind==='skill'||!!(a.cls&&BOT_CLS[a.cls]&&BOT_CLS[a.cls].magic);dmg=Math.max(1,Math.round(dmg*(holy?1.3:pure?1:.5)))}
   applyDamage(t,dmg,a,crit,opt.kind);
@@ -3058,7 +3060,7 @@ function processEvents(){
         if(e.src&&e.src.kind==='pc'&&!(e.src.cls&&BOT_CLS[e.src.cls]&&(BOT_CLS[e.src.cls].ranged||BOT_CLS[e.src.cls].magic))){const [sx]=scr(e.src.x,e.src.y,1),[tx]=scr(t.x,t.y,1);fx({k:'slash',x:t.x,y:t.y,oy:28,a:tx>=sx?0:Math.PI,max:.22,c:e.kind==='skill'?'#ffb06a':(e.crit?'#ffe27a':'#fff6c8')})}
         burst(t.x,t.y,e.crit?14:7,toP?['#ff6a5a','#fff']:['#fff','#ffe27a','#ffb04a'],e.crit?200:140,60,30);
         if(e.src===W.P&&t.kind==='mon'){SFX.hitMon(matOf(t),e.crit,e.kind==='skill');HITSTOP=Math.max(HITSTOP,e.crit?.11:e.kind==='skill'?.09:.05)}else if(t===W.P)SFX.hurtP();else if(e.src&&e.src.kind==='pc'&&Math.random()<.35&&dist(t,W.P)<500)SFX.hitMon(matOf(t),false,false);if(t===W.P){SHK=Math.max(SHK,4)}if(e.crit)SHK=Math.max(SHK,3);if(e.kind==='slam')SHK=8;break}
-      case 'miss':dmgNum(e.t,'พลาด','#9ad0ff');break;
+      case 'miss':dmgNum(e.t,e.t&&e.t.kind!=='mon'?'หลบได้!':'พลาด',e.t&&e.t.kind!=='mon'?'#7affc8':'#9ad0ff');break;
       case 'heal':dmgNum(e.t,'+'+e.n,'#7fe08a');fx({k:'sparkle',x:e.t.x,y:e.t.y,c:'#9affb0',max:.8});break;
       case 'float':floatText(e.t,e.s,e.c);break;
       case 'mondie':burst(e.t.x,e.t.y,e.t.def.boss?60:18,['#fff','#c8d0ff','#8a7a62'],e.t.def.boss?260:160,80,24);SFX.kill(matOf(e.t));if(e.t.def.ghost)burst(e.t.x,e.t.y,26,['#c8d8ff','#ffffff','#8090c0'],120,140,40);if(e.t===(W.P.act&&W.P.act.t))HITSTOP=Math.max(HITSTOP,.08);if(e.t.def.boss){SHK=10;banner('ปราบสำเร็จ!',e.t.def.n+' ล้มลงแล้ว')}break;
@@ -4071,7 +4073,7 @@ Object.assign(MONS,{
   cl_guard:MK('องครักษ์วังทอง',82,{pack:true,range:56}),cl_archer:MK('พลธนูวังทอง',84,{ranged:260,projC:'#ffe080'}),cl_eunuch:MK('ขันทีผีวังทอง',85,{ghost:1,ranged:220,projC:'#c0a0ff',blink:1}),
   cl_mtiger:MK('เสือภูเขาทองคำ',86,{flank:true,speed:120,r:24}),cl_crane:MK('กระเรียนเทพ',88,{fly:1,aggr:false,speed:80,hpM:1.2}),
   cl_elite:MK('องครักษ์เกราะมังกร',90,{elite:1,r:24,range:64}),cl_lion:MK('สิงโตทองพิทักษ์',92,{elite:1,hpM:1.5,r:28,mat:'shell'}),
-  cl_tigerw:MK('พยัคฆ์ขาวพิทักษ์ประตู',95,{elite:1,hpM:9,atkM:1.3,r:38,range:70,flank:true,speed:110,rarBonus:2.5}),cl_tigerg:MK('พยัคฆ์ทองพิทักษ์ประตู',95,{elite:1,hpM:9,atkM:1.3,r:38,range:70,flank:true,speed:110,rarBonus:2.5}),
+  cl_tigerw:MK('พยัคฆ์ขาวพิทักษ์ประตู',95,{elite:1,hpM:4.5,atkM:1.3,r:38,range:70,flank:true,speed:110,rarBonus:2.5}),cl_tigerg:MK('พยัคฆ์ทองพิทักษ์ประตู',95,{elite:1,hpM:4.5,atkM:1.3,r:38,range:70,flank:true,speed:110,rarBonus:2.5}),
   cl_baihu:MK('พยัคฆ์ขาวไป๋หู่',98,{elite:1,hpM:5,ghost:1,speed:130,r:36,range:70}),
   cl_emperor:MK('จักรพรรดิทองคำเหลียงอ๋อง',100,{mvp:1,hpM:1.6,r:44,range:90,speed:70,rarBonus:4})});
 MONS.cl_emperor.drops=MONS.cl_emperor.drops.concat([['ore_jade',3],['hp_l',2]]);MONS.cl_tigerw.drops.push(['ore_jade',.6]);MONS.cl_tigerg.drops.push(['ore_jade',.6]);
@@ -5140,6 +5142,13 @@ function shTick(dt){if(!INGAME||!W||!W.P)return;shSetRole();if(!NET.mc)return;
   if(SH.role==='client'){SH.outT-=dt;if(SH.out.length&&SH.outT<=0){SH.outT=.1;NET.mc.send({t:'mh',k:NET.key,n:CH.name,h:SH.out.splice(0,40)})}
     if(!SH.map.size&&performance.now()-SH.reqT>2000){SH.reqT=performance.now();NET.mc.send({t:'mreq',k:NET.key})}return}
   if(SH.role!=='host')return;SH.dT-=dt;SH.fT-=dt;if(SH.fT<=0){SH.fT=SH_FULL;shFull();SH.dT=SH_DT;return}if(SH.dT<=0){SH.dT=SH_DT;shDelta()}}
+
+/* ===== สมดุลความยาก: มอนทุกตัว HP +20% ATK +20% · บอส/MVP/อีลิท HP +50% (ปรับค่าได้ที่นี่) ===== */
+const BAL={hp:1.2,hpBoss:1.5,atk:1.2};
+for(const id in MONS){if(/^duel_/.test(id))continue;const d=MONS[id];if(d._bal)continue;d._bal=1;const big=d.boss||d.elite||d.mvp;
+  d.hp=Math.round(d.hp*(big?BAL.hpBoss:BAL.hp));d.atk=[Math.round(d.atk[0]*BAL.atk),Math.round(d.atk[1]*BAL.atk)]}
+/* เสือเฝ้าประตูเลือดเท่าบอสจักรพรรดิ (ค่าเดิม) · บอสจักรพรรดิเลือด ×2 */
+if(MONS.cl_emperor&&!MONS.cl_emperor._x2){const H=MONS.cl_emperor.hp;MONS.cl_tigerw.hp=H;MONS.cl_tigerg.hp=H;MONS.cl_emperor.hp=H*2;MONS.cl_emperor._x2=1}
 
 /* ===== Mobile / iOS: layout fixes, rotate hint, persistent storage ===== */
 (function(){const st=document.createElement('style');st.textContent=`
