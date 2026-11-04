@@ -5069,6 +5069,71 @@ $('wGuildB').addEventListener('click',async e=>{const t=e.target.closest('[data-
 (function(){const ab=$('autobar');if(!ab)return;const b=document.createElement('button');b.type='button';b.id='btnGuild';b.textContent='🏯 กิลด์';b.onclick=e=>{e.stopPropagation();openWin('wGuild');guildLoad(true)};const on=$('btnOnline');ab.insertBefore(b,on?on.nextSibling:ab.firstChild)})();
 setInterval(()=>{if(INGAME&&AUTH.ready&&GUILD.loaded!==CH.name)guildLoad()},3000);
 
+/* ===== GM: เสกของแบบแบ่งหมวด (ไอคอน) + แจกเหรียญ/หยกให้ผู้เล่นที่ออนไลน์ทุกคน ===== */
+const GMS={cat:'use',sub:'',sel:null,rar:0,n:1,q:'',gift:{coins:10000,jade:0,note:'',me:false,skip:{}},busy:false};
+const GM_CATS=[['use','💊 ยา / ใช้ได้'],['weapon','⚔ อาวุธ'],['gear','🛡 ชุดป้องกัน'],['acc','💍 เครื่องประดับ'],['god','🌟 GOD'],['card','🃏 การ์ด'],['etc','🪨 วัตถุดิบ / อื่นๆ']];
+const GM_WT={sword:'ดาบ',spear:'ทวน / ง้าว',bow:'ธนู',staff:'ไม้เท้า',daggers:'มีดคู่',fist:'สนับมือ',axe:'ขวาน',fan:'พัด'};
+const GM_GEAR={armor:'เสื้อเกราะ',head:'หมวก',shoes:'รองเท้า',shield:'โล่'};
+function gmCatOf(id){const it=ITEMS[id];if(it.god)return 'god';if(it.t==='weapon')return 'weapon';if(GM_GEAR[it.t])return 'gear';if(it.t==='acc')return 'acc';if(it.t==='use')return 'use';if(it.t==='card')return 'card';return 'etc'}
+function gmSubOf(id){const it=ITEMS[id];return it.t==='weapon'?(it.wt||'other'):GM_GEAR[it.t]?it.t:''}
+function gmList(){const q=GMS.q.trim();return Object.keys(ITEMS).filter(id=>{if(id.startsWith('__'))return false;const it=ITEMS[id];if(q)return it.n.includes(q)||id.includes(q);if(gmCatOf(id)!==GMS.cat)return false;return !GMS.sub||gmSubOf(id)===GMS.sub})}
+(function(){const st=document.createElement('style');st.textContent=`.gmchips{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.gmchips button{font-size:12px;padding:4px 9px}
+.gmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:5px;max-height:34vh;overflow:auto;padding:4px;border:1px solid #ffffff14;border-radius:6px;background:#0006}
+.gmgrid button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 3px;background:#1a1610;border:1px solid #4a3a22;border-radius:6px;color:#e8dcc0;font-size:11px;line-height:1.25;cursor:pointer;min-height:70px}
+.gmgrid button img{width:32px;height:32px}.gmgrid button.on{border-color:#ffd75e;background:#3a2a10;box-shadow:0 0 8px #ffd75e66}
+.gmsel{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:center;margin-top:8px;padding:8px;border:1px solid #6a5030;border-radius:8px;background:#22180e}.gmsel img{width:44px;height:44px}
+.gmplist{max-height:22vh;overflow:auto;border:1px solid #ffffff14;border-radius:6px;padding:4px 6px;font-size:12.5px}.gmplist label{display:flex;gap:6px;align-items:center;padding:2px 0}
+.gmq{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.gmplist label,label.gmme{display:flex!important;justify-content:flex-start!important;gap:8px;align-items:center;text-align:left}.gmplist input,label.gmme input{width:auto!important;flex:none;margin:0}`;document.head.appendChild(st)})();
+function gmSpawnHTML(){const L=gmList();let h='<input id="gmQ" value="'+esc(GMS.q)+'" placeholder="🔍 ค้นหาชื่อหรือรหัสของ (ค้นทุกหมวด)" style="width:100%;box-sizing:border-box;margin-top:4px">';
+  if(!GMS.q){h+='<div class="gmchips">'+GM_CATS.map(([k,l])=>'<button type="button" class="btn sm '+(GMS.cat===k?'':'ghost')+'" data-gmc="'+k+'">'+l+'</button>').join('')+'</div>';
+    const subs=GMS.cat==='weapon'?GM_WT:GMS.cat==='gear'?GM_GEAR:null;if(subs){const have=new Set(Object.keys(ITEMS).filter(id=>gmCatOf(id)===GMS.cat).map(gmSubOf));h+='<div class="gmchips"><button type="button" class="btn sm '+(GMS.sub?'ghost':'')+'" data-gms="">ทั้งหมด</button>'+Object.keys(subs).filter(k=>have.has(k)).map(k=>'<button type="button" class="btn sm '+(GMS.sub===k?'':'ghost')+'" data-gms="'+k+'">'+subs[k]+'</button>').join('')+'</div>'}}
+  h+='<div class="muted" style="font-size:11.5px;margin:2px 0">'+L.length+' รายการ · แตะเพื่อเลือก</div><div class="gmgrid">'+L.map(id=>'<button type="button" class="'+(GMS.sel===id?'on':'')+'" data-gmi="'+id+'" title="'+esc(ITEMS[id].n)+'"><img src="'+iconURL(id)+'" alt=""><span>'+esc(ITEMS[id].n)+'</span></button>').join('')+(L.length?'':'<p class="muted" style="grid-column:1/-1">ไม่พบของ</p>')+'</div>';
+  const id=GMS.sel&&ITEMS[GMS.sel]?GMS.sel:null;
+  if(id){const it=ITEMS[id],gear=isGear(id);h+='<div class="gmsel"><img src="'+iconURL(id)+'" alt=""><div><b>'+esc(it.n)+'</b> <span class="muted" style="font-size:11.5px">'+(SLOT_TH[it.t]||({use:'ใช้ได้',etc:'วัตถุดิบ',card:'การ์ด'})[it.t]||it.t)+(it.god?' · GOD':'')+'</span><div class="muted" style="font-size:11.5px">'+esc(it.d||'')+'</div></div></div>';
+    h+='<div class="g2" style="margin-top:6px">'+(gear&&!it.god?'<div><label>ระดับ</label><select id="gmRar">'+RARITY.map((r,i)=>'<option value="'+i+'" '+(GMS.rar===i?'selected':'')+' style="color:'+r.c+'">'+r.n+' · '+r.l+'</option>').join('')+'</select></div>':'<div></div>')+
+      '<div><label>'+(it.god?'ดาว GOD (1–5)':'จำนวน')+'</label><input id="gmN" type="number" min="1" value="'+GMS.n+'"></div></div>';
+    if(!gear)h+='<div class="gmq">'+[1,10,50,99].map(v=>'<button type="button" class="btn sm ghost" data-gmn="'+v+'">×'+v+'</button>').join('')+'</div>';
+    h+='<button class="btn" type="button" data-gmdo="spawn" style="width:100%;margin-top:8px">✨ เสกเข้ากระเป๋า</button>'}
+  else h+='<p class="muted" style="margin-top:8px;font-size:12px">เลือกของจากรายการด้านบน</p>';
+  h+='<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm ghost" type="button" data-adm="godall">เสก GOD ทุกชิ้น</button><button class="btn sm ghost" type="button" data-adm="godme">เสก GOD ของอาชีพฉัน</button></div>';return h}
+function gmTargets(){const L=Object.values(NET.online||{}).map(o=>o.n).filter(Boolean);const u=[...new Set(L)];return u}
+function gmGiftHTML(){const G=GMS.gift,L=gmTargets();let h='<p class="muted" style="font-size:12px;margin:6px 0">ส่งเหรียญ/หยกสวรรค์ให้ผู้เล่นที่ออนไลน์อยู่ตอนนี้ ผ่านไปรษณีย์ (ได้รับทันทีที่ตัวละครนั้น) · '+(NET.wc?'ออนไลน์ '+L.length+' คน (ไม่รวมท่าน)':'<span style="color:#ff8a7a">ยังไม่ได้เชื่อมต่อระบบออนไลน์</span>')+'</p>';
+  h+='<div class="g2"><div><label>เหรียญต่อคน</label><input id="gmCoins" type="number" min="0" value="'+G.coins+'"></div><div><label>หยกสวรรค์ต่อคน</label><input id="gmJade" type="number" min="0" value="'+G.jade+'"></div></div>';
+  h+='<div class="gmq">'+[1000,10000,100000,1000000].map(v=>'<button type="button" class="btn sm ghost" data-gmcq="'+v+'">'+v.toLocaleString()+' เหรียญ</button>').join('')+[100,1000].map(v=>'<button type="button" class="btn sm ghost" data-gmjq="'+v+'">'+v+' หยก</button>').join('')+'</div>';
+  h+='<label>ข้อความถึงผู้เล่น (ไม่บังคับ)</label><input id="gmNote" maxlength="80" value="'+esc(G.note)+'" placeholder="เช่น ของขวัญฉลองเปิดเซิร์ฟ" style="width:100%;box-sizing:border-box">';
+  h+='<label style="margin-top:8px">ผู้รับ ('+L.filter(n=>!G.skip[n]).length+'/'+L.length+' คน)</label><div class="gmplist">'+(L.length?L.map(n=>'<label><input type="checkbox" data-gmp="'+esc(n)+'" '+(G.skip[n]?'':'checked')+'> '+esc(n)+'</label>').join(''):'<span class="muted">ยังไม่มีผู้เล่นคนอื่นออนไลน์</span>')+'</div>';
+  h+='<label class="gmme" style="margin-top:6px"><input type="checkbox" id="gmMe" '+(G.me?'checked':'')+'> ส่งให้ตัวเองด้วย</label>';
+  const n=L.filter(x=>!G.skip[x]).length+(G.me?1:0);h+='<button class="btn" type="button" data-gmdo="gift" style="width:100%;margin-top:8px" '+(n&&(G.coins>0||G.jade>0)&&!GMS.busy?'':'disabled')+'>🎁 แจกให้ '+n+' คน · รวม '+(G.coins*n).toLocaleString()+' เหรียญ'+(G.jade?' · '+(G.jade*n).toLocaleString()+' หยก':'')+'</button>';
+  h+='<p class="muted" style="font-size:11px;margin-top:6px">ผู้เล่นที่ออฟไลน์จะไม่ได้รับ · ส่งแล้วจะประกาศในแชททั่วไป</p>';return h}
+{const _ra=rAdmin;rAdmin=function(){_ra();const box=$('wAdminB').querySelector('.adm');if(!box||!ACC.settings.admin||(AUTH.ready&&!isGM()))return;const tabs=box.querySelector('.gtabs');if(!tabs)return;
+  if(!tabs.querySelector('[data-at="gift"]')){const b=document.createElement('button');b.type='button';b.className='btn sm '+(ADM.tab==='gift'?'':'ghost');b.dataset.at='gift';b.textContent='🎁 แจกผู้เล่น';tabs.insertBefore(b,tabs.children[1]||null)}
+  if(ADM.tab==='spawn'||ADM.tab==='gift'){while(tabs.nextSibling)tabs.nextSibling.remove();const d=document.createElement('div');d.innerHTML=ADM.tab==='spawn'?gmSpawnHTML():gmGiftHTML();box.appendChild(d);
+    const q=$('gmQ');if(q)q.oninput=()=>{GMS.q=q.value;const pos=q.selectionStart;rAdmin();const q2=$('gmQ');q2.focus();q2.setSelectionRange(pos,pos)}}}}
+function gmReadGift(){const G=GMS.gift,c=$('gmCoins'),j=$('gmJade'),n=$('gmNote'),me=$('gmMe');if(c)G.coins=Math.max(0,Math.min(1e8,Math.floor(+c.value||0)));if(j)G.jade=Math.max(0,Math.min(1e6,Math.floor(+j.value||0)));if(n)G.note=n.value.slice(0,80);if(me)G.me=me.checked}
+$('wAdminB').addEventListener('input',e=>{if(ADM.tab==='gift'&&/gmCoins|gmJade|gmNote/.test(e.target.id)){gmReadGift();const b=document.querySelector('[data-gmdo="gift"]');if(b){const L=gmTargets(),n=L.filter(x=>!GMS.gift.skip[x]).length+(GMS.gift.me?1:0);b.disabled=!(n&&(GMS.gift.coins>0||GMS.gift.jade>0));b.textContent='🎁 แจกให้ '+n+' คน · รวม '+(GMS.gift.coins*n).toLocaleString()+' เหรียญ'+(GMS.gift.jade?' · '+(GMS.gift.jade*n).toLocaleString()+' หยก':'')}}
+  if(e.target.id==='gmN')GMS.n=Math.max(1,Math.floor(+e.target.value||1));if(e.target.id==='gmRar')GMS.rar=+e.target.value});
+$('wAdminB').addEventListener('change',e=>{if(e.target.id==='gmRar')GMS.rar=+e.target.value;if(e.target.dataset.gmp!=null){if(e.target.checked)delete GMS.gift.skip[e.target.dataset.gmp];else GMS.gift.skip[e.target.dataset.gmp]=1;gmReadGift();rAdmin()}if(e.target.id==='gmMe'){gmReadGift();rAdmin()}});
+$('wAdminB').addEventListener('click',async e=>{const t=e.target.closest('[data-gmc],[data-gms],[data-gmi],[data-gmn],[data-gmdo],[data-gmcq],[data-gmjq]');if(!t)return;e.stopImmediatePropagation();const d=t.dataset;
+  if(d.gmc!=null){GMS.cat=d.gmc;GMS.sub='';GMS.sel=null;rAdmin();return}
+  if(d.gms!=null){GMS.sub=d.gms;rAdmin();return}
+  if(d.gmi){GMS.sel=d.gmi;GMS.n=ITEMS[d.gmi].god?1:GMS.n;rAdmin();return}
+  if(d.gmn){GMS.n=+d.gmn;rAdmin();return}
+  if(d.gmcq){gmReadGift();GMS.gift.coins=+d.gmcq;rAdmin();return}
+  if(d.gmjq){gmReadGift();GMS.gift.jade=+d.gmjq;rAdmin();return}
+  if(d.gmdo==='spawn'){const id=GMS.sel;if(!id)return;const n=Math.max(1,GMS.n),it=ITEMS[id];if(isGear(id)){if(it.god){const q=mkEquip(id,6);q.star=Math.min(5,n);CH.inv.push(q)}else for(let i=0;i<Math.min(n,30);i++)CH.inv.push(mkEquip(id,GMS.rar))}else addItem(CH,id,n);
+    toast('✨ เสก '+it.n+(isGear(id)?(it.god?' ★'+Math.min(5,n):' ['+RARITY[GMS.rar].n+']'+(n>1?' ×'+Math.min(n,30):'')):' ×'+n));log('[GM] เสก '+it.n,'sys');saveAll();return}
+  if(d.gmdo==='gift'){gmReadGift();const G=GMS.gift;const L=gmTargets().filter(n=>!G.skip[n]);if(G.me)L.push(CH.name);if(!L.length||(!G.coins&&!G.jade))return;
+    if(confirmKey!=='gmgift'){confirmKey='gmgift';toast('กดอีกครั้งเพื่อยืนยันแจกให้ '+L.length+' คน');return}confirmKey=null;GMS.busy=true;rAdmin();
+    let ok=0,fail=[];const items=G.jade?[{id:'__jade',n:G.jade}]:[];const note=G.note||'ของขวัญจาก GM';
+    for(const n of L){try{await DB.mailSend(n,G.coins,items,note);ok++;const o=onlineByName(n);if(o)wsend({t:'mailping',to:o.key})}catch(err){fail.push(n)}}
+    GMS.busy=false;const what=(G.coins?G.coins.toLocaleString()+' เหรียญ':'')+(G.coins&&G.jade?' + ':'')+(G.jade?G.jade.toLocaleString()+' หยกสวรรค์':'');
+    toast('แจกสำเร็จ '+ok+' คน'+(fail.length?' · ล้มเหลว '+fail.length+' ('+fail.join(', ')+')':''));log('[GM] แจก '+what+' ให้ '+ok+' คน','loot');
+    if(ok&&NET.wc){const s='📢 [GM] แจก '+what+' ให้ผู้เล่นที่ออนไลน์ทุกคน · '+note;wsend({t:'c',ch:'g',s});log('[ทั่วไป] '+CH.name+': '+s,'cg')}
+    if(G.me)setTimeout(mailCheck,800);rAdmin()}},true);
+/* mail can carry heavenly jade */
+{const _ac=addItem;addItem=function(ch,id,n,obj){if(id==='__jade'){addJade(n||0,'ของขวัญทางไปรษณีย์');return}return _ac(ch,id,n,obj)}}
+ITEMS.__jade={n:'หยกสวรรค์',t:'etc',price:0,ic:['etc','#4fd1a5'],d:'หยกสวรรค์'};
+
 /* ===== มอนสเตอร์ร่วมกัน (แบบ "เจ้าบ้าน"): คนที่อยู่ในแมพก่อนคุมมอนทั้งแมพ ส่งสถานะให้คนอื่น · คนอื่นตี → ส่งดาเมจไปให้เจ้าบ้าน · คนตีตัวสุดท้ายได้ EXP/ของ ===== */
 const SH={role:'solo',host:null,map:new Map(),sent:new Map(),mirroring:false,priv:0,dT:0,fT:0,reqT:0,outT:0,out:[],lastFull:0,mapId:null};
 const SH_DT=.3,SH_FULL=3;
