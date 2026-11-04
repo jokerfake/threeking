@@ -2176,10 +2176,10 @@ function playerLook(ch){const w=ch.eq.weapon?ITEMS[ch.eq.weapon.id]:null,h=ch.eq
   if(ch.job&&JOBDEF[ch.job]){const J=JOBDEF[ch.job].look;L.cloth=J.cloth;if(J.armor)L.armor=true;if(!h&&J.hat){L.hat=J.hat;L.bandc=J.bandc;L.hoodC=J.hoodC}if(J.horns)L.horns=true;if(J.skin)L.skin=J.skin;if(J.shield&&!L.weapon||J.shield&&L.weapon==='sword')L.shield=L.shield||false;if(ch.job2){L.cape=JOBDEF[ch.job].c1;L.trim=1}L.job=ch.job}
   return L}
 function botLook(b){const c=BOT_CLS[b.cls];return Object.assign({g:b.g||'m',hair:b.hair||0,hc:b.hc||'#3a2418'},c.look)}
-function lookOf(e){if(e.ctrl==='input')return playerLook(CH);return botLook(e.bot)}
+function lookOf(e){if(e.kind==='rp')return e.look;if(e.ctrl==='input')return playerLook(CH);return botLook(e.bot)}
 function entModel(e){if(e.kind==='mon'&&e.mid==='marketghost'&&!e.dormant)return MON3.marketghostAwake();if(e.kind==='npc')return e.board?{g:propModel('board'),upd:()=>{}}:npcModel(e);if(e.kind==='mon'||e.kind==='pet')return monModel(e.mid);return lookModel(lookOf(e))}
 function cloudMesh(){const g=new THREE.Group();const m=LM('#ffffff',{em:'#d8e8ff',ei:.35});[[0,0,0,.9],[.8,.1,.2,.7],[-.8,.05,-.1,.7],[.1,.1,-.7,.6],[0,.1,.7,.6]].forEach(([x,y,z,r])=>part(g,gIco(r),m,x,y,z));g.position.y=.3;return g}
-function syncEnt(e,dt,T){let r=E3.get(e);const key=e.kind==='pc'?JSON.stringify(lookOf(e)):e.kind==='mon'&&e.mid==='marketghost'&&!e.dormant?'monA':e.kind;
+function syncEnt(e,dt,T){let r=E3.get(e);const key=e.kind==='pc'||e.kind==='rp'?JSON.stringify(lookOf(e)):e.kind==='mon'&&e.mid==='marketghost'&&!e.dormant?'monA':e.kind;
   if(!r||r.key!==key){if(r)SCN.remove(r.root);const m=entModel(e);const root=new THREE.Group();const inner=new THREE.Group();inner.add(m.g);root.add(inner);
     m.g.traverse(o=>{if(o.isMesh)o.castShadow=true});if(e.kind==='pet')inner.scale.setScalar(.55);if(e.champ)inner.scale.setScalar(1.2);
     const bb=new THREE.Box3().setFromObject(inner);const bw=Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z);
@@ -2228,6 +2228,7 @@ function syncAll(dt,T){
   if(MAPG){for(const c of MAPG.userData.chunks||[])c.visible=Math.abs(c.userData.c[0]-PX)<3000&&Math.abs(c.userData.c[1]-PY)<2600;for(const h of MAPG.userData.houses||[])h.visible=Math.abs(h.userData.c[0]-PX)<3200&&Math.abs(h.userData.c[1]-PY)<2800}
   for(const e of W.ents){if(e.kind==='mon'&&e.dead&&(e.deadT||0)>=3)continue;if(!near(e)&&e!==W.P)continue;syncEnt(e,dt,T)}
   for(const n of NPCLIST)syncEnt(n,dt,T);if(W.pet)syncEnt(W.pet,dt,T);
+  if(typeof NET!=='undefined')for(const e of NET.peers.values())if(near(e))syncEnt(e,dt,T);
   for(const [e,r] of E3)if(r.seen!==FRAME){SCN.remove(r.root);E3.delete(e)}
   // ground items
   const seenI=new Set();for(const g of W.items){if(!near(g))continue;let o=IT3.get(g);if(!o){o=itemMesh(g);SCN.add(o);IT3.set(g,o)}seenI.add(g);o.position.set(g.x/U,0,g.y/U);o.userData.sp.position.y=.7+g.z/U+Math.sin(T*3+g.x)*.08}
@@ -2730,6 +2731,7 @@ function hudUpdate(force){
   mt.fillStyle='#0a0c10';mt.fillRect(0,0,164,120);mt.drawImage(MINI.c,ox*ms,oy*ms,VWm*ms,VHm*ms,0,0,164,120);const QM=(x,y)=>[(x-ox)*sc,(y-oy)*sc];
   const QN=typeof questNeed==='function'?questNeed():[];for(const e of W.ents){if(e.dead||e.hidden)continue;const [x,y]=QM(e.x,e.y);if(x<-4||y<-4||x>168||y>124)continue;if(e.kind==='mon'){const q=QN.includes(e.mid),b=e.def.boss;const r=b?3.4:q?2.6:1.8;mt.fillStyle=b?'#ffd75e':q?'#ff9a2a':(e.dormant?'#c84a3a':'#ff4a3a');mt.beginPath();mt.arc(x,y,r,0,TAU);mt.fill();mt.lineWidth=.8;mt.strokeStyle='rgba(0,0,0,.7)';mt.stroke()}else if(e.kind==='pc'&&e.ctrl!=='input'){mt.fillStyle='#7fe08a';mt.fillRect(x-1.5,y-1.5,3,3)}}{const [x,y]=QM(P.x,P.y);mt.fillStyle='#ffffff';mt.beginPath();mt.arc(x,y,3,0,TAU);mt.fill();mt.strokeStyle='#000';mt.lineWidth=1;mt.stroke()}
   for(const n of NPCLIST){const [x,y]=QM(n.x,n.y);mt.fillStyle='#ffd75e';mt.fillRect(x-2,y-2,4,4)}
+  if(typeof NET!=='undefined')for(const e of NET.peers.values()){const [x,y]=QM(e.x,e.y);mt.fillStyle='#5ab8ff';mt.beginPath();mt.arc(x,y,2.6,0,TAU);mt.fill()}
   for(const o of W.objs||[]){if(!o.ready||o.kind==='herb'||o.kind==='ore')continue;const [x,y]=QM(o.x,o.y);mt.fillStyle=o.kind==='chest'?'#ffb84a':SHRINES[o.sub].c;mt.fillRect(x-2,y-2,4,4)}
   if(W.inv&&!W.inv.g.dead){const [x,y]=QM(W.inv.g.x,W.inv.g.y);mt.strokeStyle='#ffd75e';mt.lineWidth=1.5;mt.beginPath();mt.arc(x,y,5+Math.sin(W.time*6)*1.5,0,TAU);mt.stroke()}
   for(const w of W.M.warps){let [x,y]=QM(w.x,w.y);const off=x<0||y<0||x>164||y>120;x=clamp(x,4,160);y=clamp(y,4,116);mt.fillStyle=off?'rgba(127,216,255,.6)':'#7fd8ff';mt.beginPath();mt.arc(x,y,off?2.5:4,0,TAU);mt.fill()}
@@ -4229,7 +4231,7 @@ function redirURL(){return location.origin+location.pathname}
 const nameKey=n=>String(n).trim().toLowerCase();
 /* ---------- backends ---------- */
 function realBackend(sb){const map=e=>{if(!e)return null;const m=(e.message||'')+'';if(/not confirmed/i.test(m))return 'unconfirmed';if(/invalid login/i.test(m))return 'badlogin';if(/already registered/i.test(m))return 'exists';if(/rate limit|too many|security purposes/i.test(m))return 'rate';if(/password/i.test(m)&&/least|short|weak/i.test(m))return 'weakpw';return m};
-  return {mock:false,
+  return {mock:false,sb,
     async session(){const {data}=await sb.auth.getSession();const u=data.session&&data.session.user;return u?{uid:u.id,email:u.email}:null},
     async signUp(email,pw){const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:redirURL()}});if(error)return {err:map(error)};if(data.user&&data.user.identities&&data.user.identities.length===0)return {err:'exists'};return {ok:1,confirm:!data.session}},
     async signIn(email,pw){const {data,error}=await sb.auth.signInWithPassword({email,password:pw});if(error)return {err:map(error)};return {ok:1,uid:data.user.id,email:data.user.email}},
@@ -4365,6 +4367,106 @@ async function authBoot(){const cfg=sbCfg();if(cfg){try{await loadLib();SBK=real
   if(/error_description=/.test(location.hash)){const m=decodeURIComponent((location.hash.match(/error_description=([^&]+)/)||[])[1]||'').replace(/\+/g,' ');history.replaceState(null,'',redirURL());authShow('login','ลิงก์ใช้ไม่ได้: '+m+' · ลองขอใหม่','err');return}
   const confirmed=/type=signup/.test(location.hash);const s=await SBK.session();if(confirmed)history.replaceState(null,'',redirURL());
   if(s)return afterLogin(s,confirmed?'ยืนยันอีเมลแล้ว ยินดีต้อนรับ!':null);authShow('login')}
+
+/* ===== ออนไลน์: เห็นผู้เล่นอื่นในแมพ + แชท (Supabase Realtime · โหมดทดสอบใช้ BroadcastChannel ข้ามแท็บ) ===== */
+const NET={peers:new Map(),online:{},map:null,mapKey:null,mc:null,wc:null,key:null,sendT:0,last:null,lookT:0,lookJ:'',force:false,atkT:0,mode:'m',lastTo:null,chatT:0,lastMsg:'',lastMsgT:0,status:'off'};
+const NET_HZ=.25;
+/* ---------- transport ---------- */
+function netChan(name,key){
+  if(SBK&&!SBK.mock&&SBK.sb){const sb=SBK.sb;const c=sb.channel('tk:'+name,{config:{broadcast:{self:false},presence:{key}}});const cb={m:[],p:[]};let st=null,ok=false;
+    c.on('broadcast',{event:'m'},({payload})=>cb.m.forEach(f=>f(payload)));
+    c.on('presence',{event:'sync'},()=>{const o=c.presenceState();cb.p.forEach(f=>f(o))});
+    c.subscribe(s=>{if(s==='SUBSCRIBED'){ok=true;NET.status='on';if(st)c.track(st)}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){NET.status='err'}else if(s==='CLOSED')ok=false});
+    return {track(s){st=s;if(ok)c.track(s)},send(p){if(ok)c.send({type:'broadcast',event:'m',payload:p})},onMsg(f){cb.m.push(f)},onPres(f){cb.p.push(f)},close(){ok=false;try{sb.removeChannel(c)}catch(e){}}}}
+  /* mock: แท็บในเบราว์เซอร์เดียวกันเห็นกัน */
+  if(typeof BroadcastChannel==='undefined')return null;
+  const bc=new BroadcastChannel('tk_net:'+name),peers={},cb={m:[],p:[]};let st=null,dead=false;NET.status='mock';
+  const fire=()=>{const o={};for(const k in peers)o[k]=[peers[k].s];if(st)o[key]=[st];cb.p.forEach(f=>f(o))};
+  bc.onmessage=ev=>{const d=ev.data;if(!d||d.k===key)return;if(d.pr){if(d.pr==='bye')delete peers[d.k];else{peers[d.k]={s:d.s,t:Date.now()};if(d.pr==='hi'&&st)bc.postMessage({pr:'st',k:key,s:st})}fire();return}cb.m.forEach(f=>f(d.p))};
+  const hb=setInterval(()=>{if(st)bc.postMessage({pr:'st',k:key,s:st});let ch=false;for(const k in peers)if(Date.now()-peers[k].t>9000){delete peers[k];ch=true}if(ch)fire()},3000);
+  return {track(s){st=s;if(!dead)bc.postMessage({pr:'hi',k:key,s});fire()},send(p){if(!dead)bc.postMessage({k:key,p})},onMsg(f){cb.m.push(f)},onPres(f){cb.p.push(f)},close(){if(dead)return;dead=true;try{bc.postMessage({pr:'bye',k:key})}catch(e){}clearInterval(hb);bc.close()}}}
+/* ---------- state ---------- */
+function netMapOK(){return W&&W.M&&!W.M.dungeon&&!W.arena&&!W.floor&&W.mapId!=='dungeon'}
+function netMapName(){const M=W.M||MAPS[W.mapId];return M&&M.n||W.mapId}
+function netMe(){const P=W.P;return {n:CH.name,lv:CH.lv,job:jobName(),look:playerLook(CH),x:Math.round(P.x),y:Math.round(P.y),a:+(P.ang||0).toFixed(2),d:P.dead?1:0}}
+function netWorldMe(){return {n:CH.name,lv:CH.lv,job:jobName(),map:W?netMapName():''}}
+function netJoinWorld(){if(NET.wc||!AUTH.ready)return;NET.key=AUTH.uid;const c=netChan('world',NET.key);if(!c)return;NET.wc=c;
+  c.onPres(o=>{const L={};for(const k in o){if(k===NET.key)continue;const s=o[k][o[k].length-1];if(s&&s.n)L[k]=s}NET.online=L;netBtn();if($('wOnline').classList.contains('show'))rOnline()});
+  c.onMsg(netOnMsg);c.track(netWorldMe())}
+function netJoinMap(){netLeaveMap();if(!netMapOK()||!AUTH.ready)return;netJoinWorld();const key=W.mapId;NET.mapKey=key;const c=netChan('map:'+key,NET.key);if(!c)return;NET.mc=c;
+  c.onPres(o=>{const seen=new Set();for(const k in o){if(k===NET.key)continue;const s=o[k][o[k].length-1];if(!s||!s.n)continue;seen.add(k);let e=NET.peers.get(k);
+      if(!e){e={kind:'rp',id:'rp_'+k,key:k,x:s.x,y:s.y,tx:s.x,ty:s.y,r:14,ang:s.a||0,anim:{atk:0,hit:0,walk:0,t:Math.random()},buffs:{},dead:false,face:1};NET.peers.set(k,e);NET.force=true}
+      e.name=s.n;e.lv=s.lv;e.job=s.job;e.look=s.look||e.look||{g:'m',hair:0,hc:'#3a2418',cloth:'#6a5030'};e.pt=performance.now()}
+    for(const k of [...NET.peers.keys()])if(!seen.has(k))NET.peers.delete(k)});
+  c.onMsg(netOnMsg);NET.last=null;c.track(netMe());if(NET.wc)NET.wc.track(netWorldMe())}
+function netLeaveMap(){if(NET.mc){NET.mc.close();NET.mc=null}NET.peers.clear();NET.mapKey=null}
+function netLeaveAll(){netLeaveMap();if(NET.wc){NET.wc.close();NET.wc=null}NET.online={};netBtn()}
+/* ---------- messages ---------- */
+function netOnMsg(p){if(!p||!p.t)return;
+  if(p.t==='p'){const e=NET.peers.get(p.k);if(!e)return;e.tx=p.x;e.ty=p.y;e.ang=p.a;e.dead=!!p.d;if(Math.hypot(e.tx-e.x,e.ty-e.y)>700){e.x=e.tx;e.y=e.ty}return}
+  if(p.t==='a'){const e=NET.peers.get(p.k);if(e)e.anim.atk=.28;return}
+  if(p.t==='hey'){NET.force=true;return}
+  if(p.t==='c'){const s=chatClean(String(p.s||'').slice(0,120)),n=String(p.n||'?').slice(0,16);if(!s)return;
+    if(p.ch==='w'&&p.to){if(p.to!==nameKey(CH.name))return;NET.lastTo=n;log('[กระซิบจาก '+n+'] '+s,'cp');return}
+    log((p.ch==='g'?'[ทั่วไป] ':'[แมพ] ')+n+': '+s,p.ch==='g'?'cg':'cm');const e=NET.peers.get(p.k);if(e)e.bubble={s:s.length>40?s.slice(0,39)+'…':s,t:6}}}
+/* ---------- chat ---------- */
+const BADW=[/ค+ว+ย/g,/เ[หฮ]ี้?ย/g,/สั[สด](?!ส่วน)/g,/เย็ด/g,/หี(?![บด])/g,/ดอกทอง/g,/อีดอก/g,/ไอ้?สัตว์/g,/fuck/gi,/shit/gi,/bitch/gi,/cunt/gi];
+function chatClean(s){s=s.replace(/[\u0000-\u001f]/g,'').trim();for(const r of BADW)s=s.replace(r,m=>'*'.repeat(Math.min(4,m.length)));return s}
+function chatSend(raw){let s=String(raw||'').trim();if(!s)return;if(!NET.wc&&!NET.mc){toast('ยังไม่ได้เชื่อมต่อระบบออนไลน์');return}
+  const now=performance.now();if(now-NET.chatT<1200){toast('พิมพ์เร็วเกินไป รอสักครู่');return}
+  let ch=NET.mode,to=null;const m=s.match(/^\/(w|กซ)\s+(\S+)\s+([\s\S]+)/i),r=s.match(/^\/r\s+([\s\S]+)/i);
+  if(m){ch='w';to=m[2];s=m[3]}else if(r){if(!NET.lastTo){toast('ยังไม่มีคนกระซิบมา');return}ch='w';to=NET.lastTo;s=r[1]}else if(/^\/g\s+/i.test(s)){ch='g';s=s.replace(/^\/g\s+/i,'')}else if(/^\/m\s+/i.test(s)){ch='m';s=s.replace(/^\/m\s+/i,'')}
+  s=chatClean(s).slice(0,100);if(!s)return;
+  if(s===NET.lastMsg&&now-NET.lastMsgT<10000){toast('ข้อความซ้ำ');return}NET.chatT=now;NET.lastMsg=s;NET.lastMsgT=now;
+  const p={t:'c',k:NET.key,n:CH.name,s,ch};
+  if(ch==='w'){if(nameKey(to)===nameKey(CH.name))return;if(!Object.values(NET.online).some(o=>nameKey(o.n)===nameKey(to))){toast('ไม่พบ "'+to+'" ออนไลน์อยู่');return}p.to=nameKey(to);NET.wc&&NET.wc.send(p);log('[กระซิบถึง '+to+'] '+s,'cp');return}
+  if(ch==='m'){if(!NET.mc){toast('แมพนี้คุยได้เฉพาะแชททั่วไป (/g)');return}NET.mc.send(p);if(W.P)W.P.bubble={s:s.length>40?s.slice(0,39)+'…':s,t:6};log('[แมพ] '+CH.name+': '+s,'cm');return}
+  NET.wc&&NET.wc.send(p);log('[ทั่วไป] '+CH.name+': '+s,'cg')}
+/* chat UI: tab + input + mode toggle */
+(function(){const st=document.createElement('style');st.textContent=`#log div.cm{color:#f4f0e0}#log div.cg{color:#ffd98a}#log div.cp{color:#f0a8ff}
+#chatRow{display:flex;border-top:1px solid var(--line)}#chatRow input{flex:1;min-width:0;border-top:0!important;color:#f4ecd8!important}#chatMode{background:#1a1208;border:0;border-right:1px solid var(--line);color:#ffd98a;font:700 11.5px inherit;padding:0 8px;cursor:pointer;white-space:nowrap}
+#chat.min #chatRow{display:none}#autobar button#btnOnline{white-space:nowrap}
+.olst .li{grid-template-columns:1fr auto!important;cursor:pointer}.olst .li:hover{background:#ffffff10}`;document.head.appendChild(st);
+  const tabs=$('chatTabs'),b=document.createElement('button');b.type='button';b.dataset.c='chat';b.textContent='แชท';tabs.insertBefore(b,$('chatMin'));
+  const inp=$('chatIn'),row=document.createElement('div');row.id='chatRow';inp.parentNode.insertBefore(row,inp);const mb=document.createElement('button');mb.type='button';mb.id='chatMode';mb.title='เปลี่ยนช่องแชท';row.appendChild(mb);row.appendChild(inp);
+  inp.disabled=false;inp.maxLength=100;inp.placeholder='Enter พิมพ์ · /w ชื่อ ข้อความ = กระซิบ · /r ตอบกลับ';inp.setAttribute('aria-label','พิมพ์แชท');
+  const setMode=()=>{mb.textContent=NET.mode==='g'?'ทั่วไป':'แมพ'};setMode();mb.onclick=e=>{e.stopPropagation();NET.mode=NET.mode==='g'?'m':'g';setMode()};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){chatSend(inp.value);inp.value='';inp.blur()}else if(e.key==='Escape')inp.blur()});
+  inp.addEventListener('pointerdown',e=>e.stopPropagation());
+  addEventListener('keydown',e=>{if(!INGAME||e.key!=='Enter'||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;e.preventDefault();inp.focus()})})();
+renderLog=function(){const el=$('log');el.innerHTML=LOGS.filter(l=>LOGF==='all'||l.c===LOGF||(LOGF==='sys'&&(l.c==='exp'||l.c==='boss'))||(LOGF==='chat'&&/^c[mgp]$/.test(l.c))).slice(-60).map(l=>'<div class="'+l.c+'">'+esc(l.s)+'</div>').join('');el.scrollTop=el.scrollHeight};
+/* ---------- online list ---------- */
+mkWin('wOnline','ผู้เล่นออนไลน์','left:50%;top:12%;width:min(380px,94vw);transform:translateX(-50%)');
+function rOnline(){const L=Object.values(NET.online).sort((a,b)=>b.lv-a.lv);const here=NET.mapKey?netMapName():null;
+  let h='<p class="muted" style="font-size:12px;margin:0 0 6px">'+(NET.status==='mock'?'โหมดทดสอบ: เห็นกันเฉพาะแท็บในเบราว์เซอร์เดียวกัน':NET.status==='err'?'<span style="color:#ff8a7a">เชื่อมต่อเซิร์ฟเวอร์ออนไลน์ไม่ได้ · ลองรีเฟรช</span>':NET.wc?'ออนไลน์ '+(L.length+1)+' คน (รวมท่าน)':'ยังไม่เชื่อมต่อ')+' · แตะชื่อเพื่อกระซิบ</p><div class="list olst">';
+  h+='<div class="li" style="opacity:.75;cursor:default"><div><b>'+esc(CH.name)+' (ท่าน)</b><small>Lv'+CH.lv+' '+esc(jobName())+' · '+esc(W?netMapName():'')+'</small></div></div>';
+  for(const o of L)h+='<div class="li" data-wh="'+esc(o.n)+'"><div><b style="color:#9ad8ff">'+esc(o.n)+'</b><small>Lv'+(o.lv|0)+' '+esc(o.job||'')+' · '+esc(o.map||'')+(o.map===here?' · <span style="color:#7fe0a0">แมพเดียวกัน</span>':'')+'</small></div><span class="muted">💬</span></div>';
+  if(!L.length)h+='<p class="muted">ยังไม่มีผู้เล่นคนอื่นออนไลน์</p>';$('wOnlineB').innerHTML=h+'</div>'}
+$('wOnlineB').addEventListener('click',e=>{const r=e.target.closest('[data-wh]');if(!r)return;const i=$('chatIn');i.value='/w '+r.dataset.wh+' ';closeWin('wOnline');$('chat').classList.remove('min');i.focus()});
+{const _rw=renderWin;renderWin=function(id){if(id==='wOnline')return rOnline();return _rw(id)}}
+function netBtn(){const b=$('btnOnline');if(b)b.textContent='👥 '+(NET.wc?Object.keys(NET.online).length+1:0)}
+(function(){const ab=$('autobar');if(!ab)return;const b=document.createElement('button');b.type='button';b.id='btnOnline';b.title='ผู้เล่นออนไลน์';b.textContent='👥 0';b.onclick=e=>{e.stopPropagation();openWin('wOnline')};ab.insertBefore(b,ab.firstChild)})();
+/* ---------- tick: send my position, move peers ---------- */
+function netTick(dt){if(!INGAME||!W||!W.P){if(NET.wc)netLeaveAll();return}
+  if(!NET.wc&&AUTH.ready)netJoinWorld();
+  const want=netMapOK()?W.mapId:null;if(want!==NET.mapKey){if(want)netJoinMap();else netLeaveMap()}
+  if(W.P.bubble){W.P.bubble.t-=dt;if(W.P.bubble.t<=0)W.P.bubble=null}
+  for(const e of NET.peers.values()){const dx=e.tx-e.x,dy=e.ty-e.y,d=Math.hypot(dx,dy);if(d>1){const k=Math.min(1,dt*7);e.x+=dx*k;e.y+=dy*k;if(d>6)e.anim.walk=.12}
+    e.anim.t+=dt;e.anim.atk=Math.max(0,e.anim.atk-dt);e.anim.walk=Math.max(0,e.anim.walk-dt);if(e.bubble){e.bubble.t-=dt;if(e.bubble.t<=0)e.bubble=null}}
+  if(!NET.mc)return;NET.sendT-=dt;NET.lookT-=dt;
+  if(NET.lookT<=0){NET.lookT=2;const me=netMe(),j=JSON.stringify([me.look,me.lv,me.job,me.n]);if(j!==NET.lookJ){const first=!NET.lookJ;NET.lookJ=j;if(!first){NET.mc.track(me);NET.wc&&NET.wc.track(netWorldMe())}}}
+  if(NET.sendT>0)return;NET.sendT=NET_HZ;const P=W.P,L=NET.last,x=Math.round(P.x),y=Math.round(P.y),a=+(P.ang||0).toFixed(2),d=P.dead?1:0;
+  if(!NET.force&&L&&Math.abs(L.x-x)<3&&Math.abs(L.y-y)<3&&Math.abs(L.a-a)<.15&&L.d===d)return;NET.force=false;NET.last={x,y,a,d};NET.mc.send({t:'p',k:NET.key,x,y,a,d})}
+{const _st=step;step=function(dt){const r=_st(dt);try{netTick(dt)}catch(e){console.error(e)}return r}}
+/* my attack swings → others see the animation */
+{const _pe=processEvents;processEvents=function(){if(NET.mc&&W&&W.P&&W.P.anim&&W.P.anim.atk>.2&&performance.now()-NET.atkT>350){NET.atkT=performance.now();NET.mc.send({t:'a',k:NET.key})}return _pe()}}
+/* names + chat bubbles over other players */
+{const _do=drawOverlay;drawOverlay=function(dt,T){_do(dt,T);
+  for(const e of NET.peers.values()){const a=scr(e.x,e.y,0);if(!onScr(a))continue;label(a[0],a[1]+24,'Lv'+(e.lv|0)+' '+e.name,'#9ad8ff',12);if(e.job)label(a[0],a[1]+38,e.job,'#7aa8c8',10.5);if(e.dead){const b=scr(e.x,e.y,2);label(b[0],b[1],'สลบ','#ff9a8a',12)}
+    if(e.bubble){const b=scr(e.x,e.y,(e.hH||3.4)+1.4);if(onScr(b))label(b[0],b[1],e.bubble.s,'#fffbe8',12.5,true)}}
+  const P=W.P;if(P&&P.bubble){const b=scr(P.x,P.y,(P.hH||3.4)+1.4);if(onScr(b))label(b[0],b[1],P.bubble.s,'#fffbe8',12.5,true)}}}
+setInterval(()=>{if(!INGAME&&NET.wc)netLeaveAll()},1000);
+addEventListener('pagehide',()=>{try{netLeaveAll()}catch(e){}});
 
 /* ===== Mobile / iOS: layout fixes, rotate hint, persistent storage ===== */
 (function(){const st=document.createElement('style');st.textContent=`
