@@ -4723,22 +4723,86 @@ function apUI(){const box=$('apBox');if(!box||!CR)return;const A=CR.ap;
   box.innerHTML='<div class="aptabs">'+['หน้าตา','ทรงผม','ชุด','เครื่องประดับ','รูปร่าง'].map((t,i)=>'<button type="button" data-tab="'+i+'" class="'+(i===APTAB?'on':'')+'">'+t+'</button>').join('')+'</div><div class="apbody">'+T[APTAB]()+'</div>';}
 function apInit(){if($('apBox'))return;const g=$('cG');if(!g)return;['cHair','cHc','cCl'].forEach(id=>{const e=$(id);if(!e)return;e.style.display='none';const l=e.previousElementSibling;if(l&&l.tagName==='LABEL')l.style.display='none'});
   const rb=document.createElement('button');rb.type='button';rb.className='btn ghost sm aprnd';rb.id='apRnd';rb.textContent='🎲 สุ่มหน้าตา';g.after(rb);const box=document.createElement('div');box.id='apBox';rb.after(box);
-  const pv=$('pvC');if(pv){pv.width=260;pv.height=340}
+  const pv=$('pvC');if(pv){pv.width=260;pv.height=360}pvInit();
   g.addEventListener('click',()=>setTimeout(apUI,0));
   rb.onclick=()=>{const R=n=>Math.floor(Math.random()*n);CR.g=Math.random()<.5?'m':'f';CR.hair=R(12);CR.hc=AP.hc[R(12)];CR.cloth=AP.cloth[R(12)];CR.ap={eye:R(6),brow:R(3),mark:Math.random()<.5?0:R(7),beard:CR.g==='m'&&Math.random()<.4?R(5):0,skin:R(6),eyeC:R(6),outfit:R(6),acc:R(6),body:R(3)};
     [...g.children].forEach(x=>x.classList.toggle('on',x.dataset.v===CR.g));apUI()};
   box.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab!=null){APTAB=+b.dataset.tab;apUI();return}const k=b.dataset.k,v=+b.dataset.v;
     if(k==='hair')CR.hair=v;else if(k==='hc')CR.hc=AP.hc[v];else if(k==='cloth')CR.cloth=AP.cloth[v];else CR.ap[k]=v;apUI()};}
-{const _sc=showCreate;showCreate=function(slot,edit){_sc(slot);apInit();CR.ap=AP_DEF();CR.edit=false;APTAB=0;const nm=$('cName'),ok=$('cOk');nm.disabled=false;ok.textContent='สร้างตัวละคร';
+{const _sc=showCreate;showCreate=function(slot,edit){_sc(slot);apInit();PV.yaw=.45;PV.mode='full';pvBar();CR.ap=AP_DEF();CR.edit=false;APTAB=0;const nm=$('cName'),ok=$('cOk');nm.disabled=false;ok.textContent='สร้างตัวละคร';
   const ch=edit?ACC.chars[slot]:null;if(ch){CR.edit=true;CR.g=ch.g;CR.hair=ch.hair||0;CR.hc=ch.hc;CR.cloth=ch.cloth;CR.ap=Object.assign(AP_DEF(),ch.ap||{});nm.value=ch.name;nm.disabled=true;ok.textContent='บันทึกหน้าตา';
     [...$('cG').children].forEach(x=>x.classList.toggle('on',x.dataset.v===CR.g))}
   const h1=document.querySelector('#create .logo h1');if(h1)h1.textContent=edit?'แต่งหน้าตาตัวละคร':'สร้างตัวละคร';apUI()}}
-{const _dp=drawPrevRot;drawPrevRot=function(canvas,look,T){if(canvas&&canvas.id==='pvC'&&CR)look=Object.assign({},look,{g:CR.g,hair:CR.hair,hc:CR.hc,cloth:CR.cloth,ap:CR.ap,weapon:null,shield:false});return _dp(canvas,look,T)}}
+const PV={yaw:.45,mode:'full',drag:null};
+{const _dp=drawPrevRot;drawPrevRot=function(canvas,look,T){if(canvas&&canvas.id==='pvC'&&CR){look=Object.assign({},look,{g:CR.g,hair:CR.hair,hc:CR.hc,cloth:CR.cloth,ap:CR.ap,weapon:null,shield:false});return renderLook(canvas,look,PV.yaw,PV.mode)}return _dp(canvas,look,T)}}
+function pvInit(){const c=$('pvC');if(!c||c._pv)return;c._pv=1;c.style.touchAction='none';c.style.cursor='grab';const pv=c.parentElement;pv.style.position='relative';pv.style.flexDirection='column';pv.style.alignItems='center';pv.style.justifyContent='center';
+  c.addEventListener('pointerdown',e=>{PV.drag={x:e.clientX,y0:PV.yaw};c.setPointerCapture(e.pointerId);c.style.cursor='grabbing'});
+  c.addEventListener('pointermove',e=>{if(PV.drag)PV.yaw=PV.drag.y0+(e.clientX-PV.drag.x)*.014});
+  const up=()=>{PV.drag=null;c.style.cursor='grab'};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
+  c.addEventListener('wheel',e=>{e.preventDefault();const M=['full','bust','face'];let i=M.indexOf(PV.mode);i=Math.max(0,Math.min(2,i+(e.deltaY<0?1:-1)));PV.mode=M[i];pvBar()},{passive:false});
+  const bar=document.createElement('div');bar.id='pvBar';bar.style.cssText='display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:8px 6px';pv.appendChild(bar);
+  const hint=document.createElement('div');hint.style.cssText='font-size:11.5px;color:var(--muted);padding:0 6px 8px;text-align:center';hint.textContent='ลากที่ตัวละครเพื่อหมุน · ลูกกลิ้งเมาส์เพื่อซูม';pv.appendChild(hint);
+  bar.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.r)PV.yaw+=+b.dataset.r;if(b.dataset.m)PV.mode=b.dataset.m;pvBar()};pvBar()}
+function pvBar(){const b=$('pvBar');if(!b)return;const m=[['full','ทั้งตัว'],['bust','ครึ่งตัว'],['face','ใบหน้า']];
+  b.innerHTML='<button type="button" class="btn ghost sm" data-r="-0.785" aria-label="หมุนซ้าย">⟲</button>'+m.map(([k,t])=>'<button type="button" class="btn ghost sm" data-m="'+k+'" style="'+(PV.mode===k?'border-color:var(--bronze);color:#ffe08a':'')+'">'+t+'</button>').join('')+'<button type="button" class="btn ghost sm" data-r="0.785" aria-label="หมุนขวา">⟳</button>'}
 {const _nc=newChar;newChar=function(o){const ch=_nc(o);if(o&&o.ap)ch.ap=Object.assign({},o.ap);else if(CR&&$('create').classList.contains('show')&&!CR.edit)ch.ap=Object.assign({},CR.ap);return ch}}
 $('cOk').addEventListener('click',e=>{if(!CR||!CR.edit)return;e.stopImmediatePropagation();e.preventDefault();const ch=ACC.chars[CR.slot];if(!ch)return;
   Object.assign(ch,{g:CR.g,hair:CR.hair,hc:CR.hc,cloth:CR.cloth,ap:Object.assign({},CR.ap)});saveAll();try{if(typeof flushCloud==='function')flushCloud()}catch(_){}$('create').classList.remove('show');toast('บันทึกหน้าตาใหม่แล้ว');showLogin()},true);
 {const _sl=showLogin;showLogin=function(){_sl();document.querySelectorAll('#slots [data-play]').forEach(b=>{const i=+b.dataset.play;if(b.parentElement.querySelector('[data-edit]'))return;const e=document.createElement('button');e.type='button';e.className='btn ghost sm';e.dataset.edit=i;e.textContent='แต่งหน้า';b.after(e)})}}
 $('slots').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(!b)return;e.stopPropagation();showCreate(+b.dataset.edit,true)},true);
+
+/* ===== arch2.js: อัปเกรดวัง/ปราสาท (หู่เหลา · ช่านเหลียง) ให้ใช้หลังคากระเบื้องโค้ง หน้าต่างฉลุ บ้านแบบใหม่ ต้นไม้พิกเซล กำแพงมีกระเบื้องครอบ ===== */
+const ARCH2={on:true};
+function a2Keep(g){g.traverse(o=>{if(o.isMesh)o.userData.keep=true});return g}
+{const _pm=pzMerge;pzMerge=function(src,fade){src.updateMatrixWorld(true);const kept=[];src.traverse(o=>{if(o.isMesh&&o.userData.keep)kept.push([o,o.matrixWorld.clone()])});for(const[m]of kept)m.parent.remove(m);
+  const out=_pm(src,fade);for(const[m,mw]of kept){const g=m.geometry.clone();g.applyMatrix4(mw);g.computeBoundingSphere();const mm=fade?m.material.clone():m.material;const mesh=new THREE.Mesh(g,mm);mesh.castShadow=m.castShadow!==false;mesh.receiveShadow=true;out.add(mesh);if(fade)out.userData.mats.push(mm)}
+  return out}}
+/* curved tiled hip roof (same as Zhuojun houses) */
+{const _pr=pzRoof;pzRoof=function(w,d,h,o){if(!ARCH2.on)return _pr(w,d,h,o);o=o||{};const ov=o.ov==null?1.6:o.ov,col=o.col||PZ.GOLD;const B=abNew();
+  abRoof(B,'hip',0,Math.max(w,1),Math.max(d,1),{roof:arShade(col,.03),ridgeCol:PZ.GOLD2,orn:PZ.GOLD2,over:ov,H:h,up:(o.up==null?.7:o.up)*1.15,fas:PZ.RED2,pearl:h>2.4});return a2Keep(abBuild(B))}}
+/* halls: lattice bays, painted beams, stone plinth */
+{const _ph=pzHall;pzHall=function(p,x,y,z,w,d,h,o){if(!ARCH2.on)return _ph(p,x,y,z,w,d,h,o);o=o||{};
+  if(typeof W!=='undefined'&&W&&W.mapId==='changliang'&&PZ.GOLD==='#4e5a66'&&o.bays===3)return a2GoldHouse(p,x,y,z,w,d,h);
+  const g=new THREE.Group();g.position.set(x,y,z);p.add(g);const R=o.roofP?new THREE.Group():g;if(o.roofP){R.position.set(x,y,z);o.roofP.add(R)}
+  const cols=o.bays||Math.max(3,Math.round(w/2.4));
+  if(o.door){const dw=o.door;const sw=(w-dw)/2;pzBox(g,sw,h,.3,PZ.RED,-w/2+sw/2,0,d/2-.15);pzBox(g,sw,h,.3,PZ.RED,w/2-sw/2,0,d/2-.15);pzBox(g,dw,h*.25,.3,PZ.RED,0,h*.75,d/2-.15);
+    pzBox(g,w,h,.3,PZ.RED,0,0,-d/2+.15);pzBox(g,.3,h,d,PZ.RED,-w/2+.15,0,0);pzBox(g,.3,h,d,PZ.RED,w/2-.15,0,0)}else pzBox(g,w,h,d,PZ.RED,0,0,0);
+  for(let i=0;i<=cols;i++){const cx=-w/2+i*w/cols;pzCyl(g,.3,.3,h,8,PZ.RED2,cx,0,d/2+.5);pzCyl(g,.3,.3,h,8,PZ.RED2,cx,0,-d/2-.5);pzCyl(g,.42,.46,.3,8,PZ.MARB2,cx,0,d/2+.5);pzCyl(g,.42,.46,.3,8,PZ.MARB2,cx,0,-d/2-.5)}
+  const B=abNew(),fz=d/2+.04,wood=PZ.GOLD2;
+  for(let i=0;i<cols;i++){const cx=-w/2+(i+.5)*w/cols,bw=w/cols*.8;if(o.door&&Math.abs(cx)<o.door/2)continue;abWin(B,cx,h*.47,fz,bw,h*.6,wood);abBox(B,'body',bw+.12,h*.14,.08,arShade(PZ.RED,-.12),cx,h*.09,fz)}
+  for(let i=0;i<cols;i+=2){const cx=-w/2+(i+.5)*w/cols;abWin(B,cx,h*.55,-fz,w/cols*.5,h*.34,wood,Math.PI)}
+  if(d>2.5)for(const s of[-1,1])abWin(B,s*(w/2+.04),h*.55,0,Math.min(1.6,d*.3),h*.34,wood,s*Math.PI/2);
+  for(const s of[-1,1])abBox(B,'body',w+.4,.22,.08,PZ.GOLD,0,h-.55,s*(d/2+.56));
+  abBox(B,'body',w+1.2,.22,d+1.2,'#8e877b',0,.05,0);g.add(a2Keep(abBuild(B)));
+  pzBrackets(R,w+.8,d+.8,h);const r1=pzRoof(w+1.6,d+1.6,o.eave2?h*.42:h*.62,{ov:o.ov||1.8,up:o.up||.8});r1.position.y=h+.85;R.add(r1);
+  if(o.eave2){const y2=h+.85+h*.42*.55;pzBox(R,w*.86,h*.42,d*.72,PZ.RED,0,y2,0);const B2=abNew();const n2=Math.max(3,Math.round(w*.86/1.6));for(let i=0;i<n2;i++)abWin(B2,-w*.43+(i+.5)*w*.86/n2,y2+h*.21,d*.36+.04,w*.86/n2*.7,h*.26,wood);R.add(a2Keep(abBuild(B2)));
+    pzBrackets(R,w*.86+.4,d*.72+.4,y2+h*.42);const r2=pzRoof(w*.86+1.2,d*.72+1.2,h*.6,{ov:1.6,up:.7});r2.position.y=y2+h*.42+.85;R.add(r2)}
+  if(o.plaque){pzBox(g,2,1,.15,'#1a2a5a',0,h*.86,d/2+.6);pzBox(g,1.7,.75,.16,PZ.GOLD,0,h*.87,d/2+.61)}
+  return {g,R}}}
+function a2GoldHouse(p,x,y,z,w,d,h){const r=rng(Math.round(x*31+z*17));const b={x0:(x-w/2)*U,y0:(z-d/2)*U,fw:w*U,fh:d*U,H:(h+.9+r()*1.4)*U/1.3,roof:pick2(r,['#3e4c5c','#2e4a6a','#4e5a66','#5a4a3a']),wall:pick2(r,['#efe2c8','#e8dcc4','#f2e8d4'])};
+  const g=arHouse(b);g.position.y+=y;p.add(g);a2Keep(g);return {g,R:g}}
+/* pyramid towers → curved hip roof */
+{const _py=pzPyramid;pzPyramid=function(p,x,y,z,w,h){if(!ARCH2.on)return _py(p,x,y,z,w,h);const g=new THREE.Group();g.position.set(x,y,z);p.add(g);pzBox(g,w,h,w,PZ.RED,0,0,0);
+  for(let i=0;i<=4;i++)for(const s of[1,-1]){pzCyl(g,.28,.28,h,8,PZ.RED2,-w/2+i*w/4,0,s*(w/2+.45));pzCyl(g,.28,.28,h,8,PZ.RED2,s*(w/2+.45),0,-w/2+i*w/4)}
+  const B=abNew();for(const[s,ry]of[[1,0],[-1,Math.PI]]){for(let i=0;i<3;i++)abWin(B,-w/3+i*w/3,h*.5,s*(w/2+.04),w/3*.75,h*.55,PZ.GOLD2,ry);for(let i=0;i<3;i++)abWin(B,s*(w/2+.04),h*.5,-w/3+i*w/3,w/3*.75,h*.55,PZ.GOLD2,ry+Math.PI/2)}g.add(a2Keep(abBuild(B)));
+  pzBrackets(g,w+.8,w+.8,h);const r=pzRoof(w+1.6,w+1.6,h*.85,{ov:1.6,up:.9});r.position.y=h+.85;g.add(r);return g}}
+/* palace trees → pixel trees */
+{const _pt=pzTree;pzTree=function(p,x,y,z,s,c){if(!ARCH2.on)return _pt(p,x,y,z,s,c);const v=Math.abs(Math.round(x*7+z*3));const m=new THREE.Mesh(treeGeo(c&&/e8|f0|ff|d8/.test(c)?'tree2':'tree0',v%3),AR.TREEM);m.position.set(x,y,z);m.scale.setScalar((s||1)*.9);m.rotation.y=v;m.castShadow=true;m.userData.keep=true;p.add(m);return m}}
+{const _pp=pzPine;pzPine=function(p,x,y,z,s){if(!ARCH2.on)return _pp(p,x,y,z,s);const v=Math.abs(Math.round(x*5+z*11));const m=new THREE.Mesh(treeGeo('ftree0',v%2),AR.TREEM);m.position.set(x,y,z);m.scale.setScalar((s||1)*.85);m.rotation.y=v;m.castShadow=true;m.userData.keep=true;p.add(m);return m}}
+/* city walls: brick texture, stone plinth, capped merlons (all maps) */
+AR.brickT=(()=>{const c=document.createElement('canvas');c.width=64;c.height=32;const x=c.getContext('2d');x.fillStyle='#8a8478';x.fillRect(0,0,64,32);const r=rng(9);
+  for(let row=0;row<4;row++){const off=row%2?8:0;for(let i=-1;i<5;i++){const bx=i*16+off,by=row*8;const v=200+Math.floor(r()*45);x.fillStyle=`rgb(${v},${v-6},${v-14})`;x.fillRect(bx+1,by+1,14,6);x.fillStyle='rgba(255,255,255,.18)';x.fillRect(bx+1,by+1,14,1);x.fillStyle='rgba(0,0,0,.18)';x.fillRect(bx+1,by+6,14,1)}}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t})();
+function a2BrickMat(col,rx,ry){const t=AR.brickT.clone();t.needsUpdate=true;t.repeat.set(Math.max(1,rx),Math.max(1,ry));return new THREE.MeshLambertMaterial({color:col,map:t})}
+{const _cw=pzCityWall;pzCityWall=function(p,x0,z0,x1,z1,h){_cw(p,x0,z0,x1,z1,h);if(!ARCH2.on)return;const w=x1-x0,d=z1-z0;const m=new THREE.Mesh(new THREE.BoxGeometry(w+.04,h,d+.04),a2BrickMat(mixHex(PZ.WALL,'#ffffff',.08),Math.max(w,d)/2.2,h/1.1));
+  m.position.set((x0+x1)/2,h/2,(z0+z1)/2);m.castShadow=true;m.receiveShadow=true;m.userData.keep=true;p.add(m)}}
+{const _hm=houseMesh;houseMesh=function(b){if(!ARCH2.on||b.type!=='wall')return _hm(b);const g=new THREE.Group(),w=b.fw/U,d=b.fh/U,H=b.H/U*1.05,col=b.wall||'#8a8e98';g.position.set((b.x0+b.fw/2)/U,0,(b.y0+b.fh/2)/U);
+  const long=w>=d,L=long?w:d,T=long?d:w;const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;g.add(m);return m};
+  const bm=a2BrickMat(mixHex(col,'#ffffff',.12),L/2.2,H/1.1);add(new THREE.BoxGeometry(w,H,d),bm,0,H/2,0);
+  const st=new THREE.MeshLambertMaterial({color:mixHex(col,'#000000',.25)});add(new THREE.BoxGeometry(w+.5,.7,d+.5),st,0,.35,0);add(new THREE.BoxGeometry(w+.25,.22,d+.25),new THREE.MeshLambertMaterial({color:mixHex(col,'#ffffff',.2)}),0,H+.05,0);
+  const mm=a2BrickMat(mixHex(col,'#ffffff',.12),1,1),cap=new THREE.MeshLambertMaterial({color:mixHex(col,'#000000',.4)});const n=Math.floor(L/1.6);
+  for(let i=0;i<n;i++){const o=-L/2+.8+i*1.6;for(const s of[-1,1]){const px=long?o:s*(T/2-.2),pz=long?s*(T/2-.2):o;add(new THREE.BoxGeometry(long?.85:.4,.75,long?.4:.85),mm,px,H+.5,pz);add(new THREE.BoxGeometry(long?.95:.5,.12,long?.5:.95),cap,px,H+.93,pz)}}
+  g.userData.wall=true;g.userData.mats=[];return g}}
 
 /* ===== อุปกรณ์อลังการตามระดับ (SR→GOD) + เอฟเฟกต์สกิลยิ่งใหญ่ ===== */
 const RCOL=['#e8e4d8','#6ad07a','#5aa8ff','#c07aff','#ffd75e','#ff4a4a','#ff8af0'];
