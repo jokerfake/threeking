@@ -1066,7 +1066,7 @@ function kill(t,src){
 function gainExp(b,j){
   if(W.P.dead)return;
   CH.exp+=b;if(CH.jlv<jobMax())CH.jexp+=j;emit('exp',{b,j});
-  while(CH.exp>=expNeed(CH.lv)&&CH.lv<99){CH.exp-=expNeed(CH.lv);CH.lv++;CH.statp+=Math.floor(CH.lv/5)+3;const d=derive(W.P);W.P.hp=d.maxHp;W.P.sp=d.maxSp;for(const e of party())if(e.ctrl==='bot'&&!e.dead)e.hp=derive(e).maxHp;emit('lvup',{t:W.P,base:true})}
+  while(CH.exp>=expNeed(CH.lv)&&CH.lv<150){CH.exp-=expNeed(CH.lv);CH.lv++;CH.statp+=Math.floor(CH.lv/5)+3;const d=derive(W.P);W.P.hp=d.maxHp;W.P.sp=d.maxSp;for(const e of party())if(e.ctrl==='bot'&&!e.dead)e.hp=derive(e).maxHp;emit('lvup',{t:W.P,base:true})}
   while(CH.jlv<jobMax()&&CH.jexp>=jexpNeed(CH.jlv)){CH.jexp-=jexpNeed(CH.jlv);CH.jlv++;CH.skillp++;emit('lvup',{t:W.P,job:true})}
   if(CH.jlv>=jobMax())CH.jexp=0;
 }
@@ -1583,7 +1583,7 @@ function core_haunt(H){const {add,box,wallSeg,rectT,road,lake,scatter,setT,MR,MC
 
 /* ===== EXTRA SYSTEMS: day/night & weather, random-option gear, refine/sockets/cards, gathering, chests, shrines, bounties, invasion, dungeon, pets, mount ===== */
 /* ---------- time & weather ---------- */
-const DAY_LEN=720;
+const DAY_LEN=1800;// 1 วันในเกม = 30 นาทีจริง
 function dayT(){return (Date.now()/1000+DAY_LEN*.15)%DAY_LEN/DAY_LEN}
 function dayLight(){return .5+.5*Math.cos(dayT()*TAU)}
 function clockText(){const h=(12+dayT()*24)%24;const hh=Math.floor(h),mm=Math.floor((h-hh)*60);const L=dayLight();return (L>.7?'กลางวัน':L>.35?(dayT()<.5?'ยามเย็น':'รุ่งสาง'):'กลางคืน')+' '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
@@ -2291,7 +2291,7 @@ function drawOverlay(dt,T){const P=W.P,tgt=P.act&&P.act.t||null;
   for(const g of W.items){const it=ITEMS[g.item],rar=g.obj?g.obj.rar:(it.t==='card'?2:0);if(rar>=1||it.t==='card'||HOVER===g){const a=scr(g.x,g.y,1.6);if(onScr(a))label(a[0],a[1],g.obj?itemName(g.obj):(it.t==='card'?itemName({id:g.item}):it.n),g.obj?itemColor(g.obj):it.t==='card'?'#c08af0':'#e8e4d8',11)}}
   for(const e of W.ents){if(e.kind==='mon'&&e.dead)continue;if(e.kind==='mon'){const r=E3.get(e);if(e.dormant){if(e.def.disguise){const b=scr(e.x,e.y,4);if(onScr(b))label(b[0],b[1],e.def.disguise,'#ffe9a8',13,true)}continue}if(r&&!r.root.visible)continue}const a=scr(e.x,e.y,0);if(!onScr(a))continue;const ex=a[0],ey=a[1];
     if(e.kind==='pc'){const d=derive(e);bar(ex,ey+8,44,e.hp/d.maxHp,e.ctrl==='input'?'#4ade80':'#86efac');if(e.ctrl==='input')bar(ex,ey+14,44,e.sp/d.maxSp,'#60a5fa');label(ex,ey+28,e.name+(e.ctrl==='bot'?' · '+BOT_CLS[e.cls].n:''),e.ctrl==='input'?'#ffffff':'#bdf5c8',12);if(e.dead){const b=scr(e.x,e.y,2);label(b[0],b[1],'สลบ','#ff9a8a',12)}}
-    else if(e.hp<e.maxHp||e===tgt||e===HOVER||e.floorBoss||e.invader){const big=e.def.boss||e.floorBoss||e.invader;bar(ex,ey+8,big?96:48,e.hp/e.maxHp,'#ef4444');label(ex,ey+24,'Lv'+(e.def.lv+((e.mul&&e.mul.lv)||0))+' '+(e.champ?'จ่าฝูง ':'')+e.def.n+(e.floorBoss?' (บอสชั้น)':''),big?'#ffd75e':e.champ?'#ffb06a':'#ffe0d0',12)}}
+    else if(e.kind==='mon'){const big=e.def.boss||e.floorBoss||e.invader;if(e.hp<e.maxHp||e===tgt||e===HOVER||big)bar(ex,ey+8,big?96:48,e.hp/e.maxHp,'#ef4444');if(big||e===tgt||e===HOVER||Math.abs(e.x-P.x)+Math.abs(e.y-P.y)<1100){const hd=scr(e.x,e.y,(e.hH||2.2)+.55);label(hd[0],hd[1],'Lv'+(e.def.lv+((e.mul&&e.mul.lv)||0))+' '+(e.champ?'จ่าฝูง ':'')+e.def.n+(e.floorBoss?' (บอสชั้น)':''),big?'#ffd75e':e.champ?'#ffb06a':e.def.aggr===false?'#bfe8ff':'#ffe0d0',big?13:11)}}}
   for(const n of NPCLIST){const a=scr(n.x,n.y,(n.hH||3.4)+.7);if(onScr(a))label(a[0],a[1],n.n,n.wander?'#d8e8ff':'#ffe9a8',13,!n.wander)}
   if(P.channel){const a=scr(P.x,P.y,(P.hH||3.4)+1);bar(a[0],a[1],56,1-P.channel.t/P.channel.max,'#c8f0a0');label(a[0],a[1]-12,P.channel.o.kind==='ore'?'กำลังขุดแร่…':'กำลังเก็บสมุนไพร…','#e8ffd0',11)}}
 function fx(o){const f=Object.assign({t:0},o);f.h=(o.oy||0)/24;if(o.tx!=null)f.th=(o.toy||0)/24;f.dx=0;f.dy=0;FX.push(f)}
@@ -4291,6 +4291,59 @@ function gcCranes(){if(GCD.cranes)return GCD.cranes;const L=[];for(let i=0;i<14;
 /* peaceful cranes: don't count as aggressive; striking one angers nearby cranes */
 {const _ad=applyDamage;applyDamage=function(t,dmg,src,crit,kind){const r=_ad(t,dmg,src,crit,kind);if(t&&t.mid==='cl_crane'&&src&&src.kind==='pc'&&W.mapId==='changliang'&&!t.warned){t.warned=1;emit('float',{t,s:'กระเรียนเทพโกรธ!',c:'#ffe0f0'})}return r}}
 
+/* ===== เทือกเขาเสาฟ้าเทียนจู้ (天柱) Lv100–150: เสาหินสูงเสียดฟ้า ทะเลเมฆ น้ำตก · มอนเยอะ · MVP มังกรเทพ Lv150 ===== */
+const TZ={W:12800,H:11200,pillars:[]};
+(()=>{const r=rng(4242);let n=0,guard=0;while(n<72&&guard<3000){guard++;const x=400+r()*(TZ.W-800),y=400+r()*(TZ.H-800),rad=150+r()*300;
+  if(Math.hypot(x-TZ.W/2,y-TZ.H/2)<600||Math.hypot(x-300,y-10400)<700||Math.abs(y-(TZ.H/2+Math.sin(x/1500)*900))<200)continue;if(TZ.pillars.some(p=>Math.hypot(p.x-x,p.y-y)<p.r+rad+260))continue;
+  TZ.pillars.push({x,y,r:rad,h:22+r()*52,fall:r()<.3,pink:r()<.25,seed:r()});n++}})();
+Object.assign(MONS,{
+  ts_ape:MK('วานรเมฆขาว',102,{pack:true,speed:100,r:22}),ts_crane:MK('กระเรียนพายุ',108,{fly:1,ranged:250,projC:'#bfe0ff',speed:100}),ts_golem:MK('ยักษ์ศิลาเสาฟ้า',115,{hpM:1.8,mat:'shell',speed:50,r:30}),
+  ts_tiger:MK('พยัคฆ์หิมะ',122,{flank:true,speed:125,r:24}),ts_warrior:MK('ทหารเซียนเมฆ',128,{range:60,speed:85}),ts_drake:MK('มังกรน้อยพายุ',135,{fly:1,ranged:270,projC:'#9ab0ff',speed:110}),
+  ts_guardian:MK('เทพพิทักษ์ขุนเขา',142,{elite:1,hpM:1.4,r:28,range:70}),ts_dragon:MK('มังกรเทพเทียนจู้',150,{mvp:1,fly:1,ranged:300,projC:'#c0a0ff',r:44,summon:'ts_drake'})});
+MONS.ts_dragon.drops=MONS.ts_dragon.drops.concat([['ore_jade',4],['hp_l',3]]);
+Object.assign(MON3,{
+  ts_ape:()=>tintM(MON3.tl_ape(),'#f0f0f4',.75,1.05),
+  ts_crane:()=>tintM(MON3.hl_crane(),'#9ab8e0',.35,1.6),
+  ts_golem:()=>tintM(MON3.golem?MON3.golem():MON3.tl_ape(),'#8a8070',.45,1.7),
+  ts_tiger:()=>tigerM({fur:'#f4f8ff',str:'#5a6a8a',eye:'#80d0ff',glow:1,fang:1,scale:1.25}),
+  ts_warrior:()=>human({cloth:'#e8eef8',robe:'#e8eef8',tor:{c:'#e8eef8',robe:1,trim:'#7ab0ff',belt:'#4a7ad0'},clothPat:'plate',paul:'#bcd0f0',hat:'helm',plume:'#7ab0ff',face:{helm:'#bcd0f0',glow:'#80c0ff'},hair:'#e0e8f0',rh:WPN.spear}),
+  ts_drake:()=>tintM(MON3.wyvern(),'#6a7ae0',.6,1.7),
+  ts_guardian:()=>human(SOLDIER('#1a5a4a','#6ae0b0',{scale:1.6,cape:'#2a8a6a',plume:'#a0ffd0',rh:WPN.guandao,face:{helm:'#6ae0b0',glow:'#a0ffd0',noMouth:1}})),
+  ts_dragon:()=>tintM(MON3.icedragon(),'#b090ff',.5,1.6)});
+MAPS.tianzhu={n:'เทือกเขาเสาฟ้าเทียนจู้',cn:'天柱',w:TZ.W,h:TZ.H,theme:'valley',bgm:1,gen:'wild',start:[400,10400],
+  warps:[W2(70,10400,'changliang',11700,12000,'นครทองคำช่านเหลียง')],
+  wild:{forest:['gpine','tree1','gpine','crag'],fd:.4,rocks:['mrock','rock'],lakes:4,lakeR:[180,380],pois:['shrine','shrine','ruins','grove']},
+  mvp:{id:'ts_dragon',x:TZ.W/2,y:TZ.H/2,zone:'ลานเมฆกลางหุบเสาฟ้า',min:45},
+  spawns:[['ts_ape',30],['ts_crane',22],['ts_golem',18],['ts_tiger',24],['ts_warrior',22],['ts_drake',16],['ts_guardian',8]]};
+MAPS.changliang.warps.push(W2(11930,12000,'tianzhu',400,10400,'เทือกเขาเสาฟ้า (Lv100+)',{minLv:100}));
+MAPINFO.push(['tianzhu','เทือกเขาเสาฟ้าเทียนจู้','天柱','Lv100–150 · เสาหินสูงเสียดฟ้า ทะเลเมฆ น้ำตก · MVP มังกรเทพ Lv150']);
+COACH.push(['tianzhu','เทือกเขาเสาฟ้า',700,10300]);
+QUESTS.push(
+  {id:'q19',minLv:100,title:'ประตูสู่เสาฟ้า',goal:{ts_ape:20,ts_crane:10},rew:{b:40000000,j:6000000,coins:800000,items:[['ore_jade',10],['hp_l',50]]},
+    intro:'เมื่อจักรพรรดิทองคำเป็นอิสระ ทางลับตะวันออกของช่านเหลียงก็เปิดออก มันนำไปสู่เทือกเขาเสาฟ้าเทียนจู้ ดินแดนที่เสาหินสูงเสียดเมฆ ปราบวานรเมฆขาว 20 ตัว และกระเรียนพายุ 10 ตัวที่เฝ้าทางเข้า',
+    done:'เสียงคำรามก้องมาจากใจกลางหุบเขา มีบางสิ่งตื่นขึ้นแล้ว'},
+  {id:'q20',minLv:140,title:'มังกรเทพเทียนจู้',goal:{ts_dragon:1},rew:{b:120000000,j:15000000,coins:2000000,items:[['ore_jade',20],['hp_l',60]]},
+    intro:'มังกรเทพเทียนจู้หลับใหลอยู่บนลานเมฆกลางหุบมาพันปี พลังทองคำของช่านเหลียงปลุกมันให้คลั่ง รวมพลังผู้กล้า แล้วสยบมันให้ได้',
+    done:'มังกรเทพก้มหัวให้ท่าน ทะเลเมฆสงบลง ท่านคือตำนานแห่งแผ่นดิน · (จบบทที่ 4 · ตอนต่อไปเร็วๆ นี้)'});
+/* gen: pillars block the ground */
+{const _gw=genWild;genWild=function(M,H){_gw(M,H);if(M!==MAPS.tianzhu)return;for(const p of TZ.pillars){gridCircle(p.x,p.y,p.r*.82,1);for(let y=p.y-p.r;y<p.y+p.r;y+=TS/2)for(let x=p.x-p.r;x<p.x+p.r;x+=TS/2)if((x-p.x)**2+(y-p.y)**2<(p.r*.9)**2)H.setT(x,y,8)}
+  for(const p of TZ.pillars)if(p.fall)H.lake(p.x+p.r*.9,p.y+p.r*.6,140,90);PROPS.splice(0,PROPS.length,...PROPS.filter(q=>!TZ.pillars.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<p.r+30)))}}
+/* 3D: stone pillars with pines, waterfalls, cloud belts, distant ranges */
+function tzPillar(p){const g=new THREE.Group(),X=pzX,x=X(p.x),z=X(p.y),R=X(p.r);const r=rng(Math.floor(p.seed*1e6));const stone=['#8a8070','#9a8e78','#7a7266'],moss='#4a7a3a';
+  let y=0,rad=R;const segs=Math.ceil(p.h/6);for(let i=0;i<segs;i++){const hh=p.h/segs,rr=rad*(.92+r()*.1);pzAdd(g,new THREE.CylinderGeometry(rr*(.86+r()*.08),rr,hh+.4,7),stone[i%3],x+(r()-.5)*.6,y+hh/2,z+(r()-.5)*.6,{ry:r()*6});if(r()<.35)pzAdd(g,new THREE.DodecahedronGeometry(rr*.35,0),moss,x+Math.cos(i)*rr*.8,y+hh*.6,z+Math.sin(i)*rr*.8,{s:[1,.5,1]});y+=hh;rad*=.97}
+  pzAdd(g,new THREE.CylinderGeometry(rad*1.05,rad*.95,1.2,8),moss,x,y+.4,z);
+  const n=2+Math.floor(r()*4);for(let i=0;i<n;i++){const a=r()*TAU,d=r()*rad*.6,s=.9+r()*.8;const px=x+Math.cos(a)*d,pz=z+Math.sin(a)*d;pzCyl(g,.18*s,.26*s,1.8*s,5,'#5a3a24',px,y+.8,pz);for(let k=0;k<3;k++)pzAdd(g,new THREE.ConeGeometry((1.5-k*.35)*s,1.5*s,6),p.pink&&k===1?'#f0a8c8':'#2a6a3a',px,y+.8+(1.9+k*.85)*s,pz)}
+  if(p.fall){const fx=x+R*.9,fz=z+R*.6;pzAdd(g,new THREE.PlaneGeometry(1.6,y),pzMat('#d8f0ff',{transparent:true,opacity:.6,emissive:'#6aa8d0',emissiveIntensity:.4,side:THREE.DoubleSide}),fx-.3,y/2,fz-.6,{ry:-.6});pzAdd(g,new THREE.SphereGeometry(1.4,8,6),pzMat('#ffffff',{transparent:true,opacity:.5}),fx,.3,fz)}
+  return g}
+function buildTianzhu3d(){const root=new THREE.Group(),F=[],X=pzX;
+  for(const p of TZ.pillars){const m=pzMerge(tzPillar(p),true);m.userData.c=[p.x,p.y];F.push(m);root.add(m)}
+  const CL=new THREE.Group();const r=rng(99);for(let i=0;i<70;i++){const p=TZ.pillars[Math.floor(r()*TZ.pillars.length)];const a=r()*TAU,d=X(p.r)+2+r()*4;pzCloud(CL,X(p.x)+Math.cos(a)*d,p.h*(.35+r()*.4),X(p.y)+Math.sin(a)*d,2.5+r()*3)}
+  for(let i=0;i<30;i++)pzCloud(CL,X(r()*TZ.W),40+r()*20,X(r()*TZ.H),4+r()*4);
+  const far=new THREE.Group();for(let i=0;i<40;i++){const a=i/40*TAU,d=X(TZ.W)*.85+r()*40,cx=X(TZ.W/2)+Math.cos(a)*d,cz=X(TZ.H/2)+Math.sin(a)*d*.9,h=60+r()*90;pzAdd(far,new THREE.ConeGeometry(25+r()*30,h,6),i%2?'#6a7a88':'#7a8a96',cx,h/2-4,cz);pzAdd(far,new THREE.ConeGeometry(10,h*.25,6),'#f4f8fc',cx,h*.875-4,cz)}
+  const cl=pzMerge(CL,false);cl.children.forEach(m=>m.castShadow=false);root.add(cl);const fm=pzMerge(far,false);fm.children.forEach(m=>{m.castShadow=false;m.receiveShadow=false});root.add(fm);root.userData.fade=F;return root}
+{const _bm=buildMap3d;buildMap3d=function(){_bm();if(W.mapId!=='tianzhu'||W.floor)return;if(!MAPG.userData.tz){const t0=performance.now();MAPG.userData.tz=buildTianzhu3d();MAPG.add(MAPG.userData.tz);console.log('tianzhu built',Math.round(performance.now()-t0)+'ms')}BLDS=BLDS.concat(MAPG.userData.tz.userData.fade)}}
+{const _em=enterMap;enterMap=function(id,x,y,f){_em(id,x,y,f);if(id==='tianzhu'&&Math.random()<.7)W.weather='clear'}}
+
 /* ===== อุปกรณ์อลังการตามระดับ (SR→GOD) + เอฟเฟกต์สกิลยิ่งใหญ่ ===== */
 const RCOL=['#e8e4d8','#6ad07a','#5aa8ff','#c07aff','#ffd75e','#ff4a4a','#ff8af0'];
 /* ---------- look: weapon/armor rarity, refine ---------- */
@@ -5133,6 +5186,81 @@ $('wAdminB').addEventListener('click',async e=>{const t=e.target.closest('[data-
 /* mail can carry heavenly jade */
 {const _ac=addItem;addItem=function(ch,id,n,obj){if(id==='__jade'){addJade(n||0,'ของขวัญทางไปรษณีย์');return}return _ac(ch,id,n,obj)}}
 ITEMS.__jade={n:'หยกสวรรค์',t:'etc',price:0,ic:['etc','#4fd1a5'],d:'หยกสวรรค์'};
+
+/* ===== ปรับปรุงชุดใหญ่: กระเป๋าแบบช่อง+ตัวละคร · ทูลทิปทุกที่ · ขี่สัตว์เลี้ยง · แสงตอนวิ่ง · ออร่า NPC ===== */
+const INV_CAP=60;
+(function(){const st=document.createElement('style');st.textContent=`
+#wInv{width:min(720px,96vw)!important}
+.invwrap{display:grid;grid-template-columns:220px 1fr;gap:12px}@media (max-width:640px){.invwrap{grid-template-columns:1fr}}
+.doll{position:relative;height:330px;border:1px solid #5a4424;border-radius:10px;background:radial-gradient(ellipse at 50% 40%,#3a2a18,#120c08 75%)}
+.doll canvas{position:absolute;left:50%;top:28px;transform:translateX(-50%);width:132px;height:250px}
+.doll .slot{position:absolute;width:46px;height:46px}.doll .lbl{position:absolute;font-size:10px;color:#a8947a;width:46px;text-align:center}
+.doll .pw{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11.5px;color:#ffd98a}
+.grid-inv.fixed{grid-template-columns:repeat(auto-fill,46px);max-height:300px;overflow:auto;padding:4px;border:1px solid #ffffff12;border-radius:8px;background:#0005}
+.slot.empty{background:#0b0d12;border:1px dashed #2a2e3a;cursor:default}
+.slot .rb{position:absolute;left:0;right:0;bottom:0;height:3px}
+#tip{max-width:300px!important;padding:10px 12px!important;font-size:12.5px!important;border-radius:8px}
+#tip .th{display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #ffffff1a}#tip .th img{width:40px;height:40px}
+#tip .th h5{margin:0;font-size:14px}#tip .rk{display:inline-block;font-size:10.5px;font-weight:800;padding:0 6px;border-radius:4px;color:#000;margin-right:4px}
+#tip .sec{margin-top:5px}#tip .ds{margin-top:6px;color:#c8b48a;font-size:11.5px;font-style:italic}`;document.head.appendChild(st)})();
+/* ---------- inventory: equipment doll + fixed slot grid ---------- */
+const DOLL_POS={head:[87,8],weapon:[8,110],shield:[166,110],armor:[8,190],acc:[166,190],shoes:[87,262]};
+function rInvDoll(){const cats={all:null,use:['use'],eq:['weapon','armor','head','shoes','shield','acc'],etc:['etc','card']};if(!(invTab in cats))invTab='all';
+  const items=CH.inv.map((s,i)=>({s,i})).filter(o=>ITEMS[o.s.id]&&(!cats[invTab]||cats[invTab].includes(ITEMS[o.s.id].t)));
+  let h='<div class="invwrap"><div><div class="doll"><canvas id="dollC" width="264" height="500"></canvas>';
+  for(const s of SLOTS){const e=CH.eq[s],[x,y]=DOLL_POS[s]||[0,0];h+='<button type="button" class="slot'+slotCls(e)+'" style="left:'+x+'px;top:'+y+'px" data-uneq="'+s+'" data-tip="eq:'+s+'" title="'+SLOT_TH[s]+'">'+(e?'<img src="'+iconURL(e.id)+'" alt="">'+(e.ref?'<span class="rf">+'+e.ref+'</span>':''):'<span style="font-size:10px;color:#6a5a40">'+SLOT_TH[s]+'</span>')+'</button>'}
+  const d=derive(W.P);h+='<div class="pw">ATK '+Math.round(d.atkMin)+'–'+Math.round(d.atkMax)+' · DEF '+d.def+' · FLEE '+d.flee+'</div></div><p class="muted" style="font-size:11px;margin:4px 0 0;text-align:center">แตะช่องอุปกรณ์เพื่อถอด</p></div><div>';
+  h+='<div class="tabs2">'+[['all','ทั้งหมด'],['use','ใช้ได้'],['eq','อุปกรณ์'],['etc','ของสะสม']].map(([k,t])=>'<button type="button" data-tab="'+k+'" class="'+(k===invTab?'on':'')+'">'+t+'</button>').join('')+'</div>';
+  const n=Math.max(invTab==='all'?INV_CAP:Math.max(24,Math.ceil(items.length/8)*8),items.length);
+  h+='<div class="grid-inv fixed">';for(let k=0;k<n;k++){const o=items[k];if(!o){h+='<div class="slot empty"></div>';continue}const rc=o.s.rar?RARITY[o.s.rar].c:null;
+    h+='<button type="button" class="slot'+slotCls(o.s)+(invSel===o.i?' sel':'')+'" data-i="'+o.i+'" data-tip="inv:'+o.i+'"><img src="'+iconURL(o.s.id)+'" alt="">'+(o.s.n>1?'<span class="n">'+o.s.n+'</span>':'')+(o.s.ref?'<span class="rf">+'+o.s.ref+'</span>':'')+(rc?'<i class="rb" style="background:'+rc+'"></i>':'')+'</button>'}
+  h+='</div><p class="muted" style="font-size:11.5px;margin:4px 0">ช่องที่ใช้ <b style="color:'+(CH.inv.length>INV_CAP?'#ff8a7a':'#ffe9a8')+'">'+CH.inv.length+'/'+INV_CAP+'</b> · เหรียญ '+CH.coins.toLocaleString()+'</p>';
+  const s=CH.inv[invSel];if(s&&ITEMS[s.id]){const it=ITEMS[s.id];h+='<div class="detail"><h4 style="color:'+itemColor(s)+'">'+esc(itemName(s))+(s.n>1?' ×'+s.n:'')+'</h4>'+itemLines(s).filter(Boolean).map(l=>'<div class="'+(l[0]==='◆'?'':'muted')+'" style="'+(l[0]==='◆'?'color:#9ad0ff':'')+'">'+esc(l)+'</div>').join('')+'<div class="row" style="margin-top:6px;flex-wrap:wrap">';
+    if(it.t==='use')h+='<button class="btn sm" type="button" data-act="use">ใช้</button><button class="btn alt sm" type="button" data-act="hot">ตั้งปุ่มลัด</button>';
+    if(SLOTS.includes(it.t))h+='<button class="btn sm" type="button" data-act="equip">สวมใส่</button>';
+    h+='<button class="btn ghost sm" type="button" data-act="drop">'+(confirmKey==='drop'+invSel?'ยืนยันทิ้ง?':'ทิ้ง')+'</button></div></div>'}
+  h+='</div></div>';$('wInvB').innerHTML=h;try{renderLook($('dollC'),playerLook(CH),.5,'full')}catch(e){}
+  $('wInvB').onclick=e=>{const u=e.target.closest('[data-uneq]');if(u){if(CH.eq[u.dataset.uneq]){unequip(u.dataset.uneq);hudUpdate();if($('wChar').classList.contains('show'))rChar()}rInv();return}
+    const tb=e.target.closest('[data-tab]');if(tb){invTab=tb.dataset.tab;invSel=null;rInv();return}
+    const sl=e.target.closest('[data-i]');if(sl){const i=+sl.dataset.i;if(invSel===i&&ITEMS[CH.inv[i].id].t==='use')useItem(CH.inv[i].id);else if(invSel===i&&SLOTS.includes(ITEMS[CH.inv[i].id].t)){equip(i);invSel=null;rInv();hudUpdate();return}invSel=i;confirmKey=null;rInv();return}
+    const a=e.target.closest('[data-act]');if(!a)return;const s=CH.inv[invSel];if(!s)return;
+    if(a.dataset.act==='use')useItem(s.id);if(a.dataset.act==='hot')assignHot('item',s.id);
+    if(a.dataset.act==='equip'){equip(invSel);invSel=null;if($('wChar').classList.contains('show'))rChar()}
+    if(a.dataset.act==='drop'){if(confirmKey!=='drop'+invSel){confirmKey='drop'+invSel;rInv();return}CH.inv.splice(invSel,1);invSel=null;confirmKey=null}
+    rInv();hudUpdate()}}
+rInv=rInvDoll;invTab='all';
+/* ---------- richer tooltips, also on any item icon (shops, gacha, market, smith, hotbar…) ---------- */
+const ICON2ID=new Map();function iconId(src){if(!ICON2ID.size||ICON2ID.get('_n')!==Object.keys(ITEMS).length){ICON2ID.clear();for(const id in ITEMS){try{ICON2ID.set(iconURL(id),id)}catch(e){}}ICON2ID.set('_n',Object.keys(ITEMS).length)}return ICON2ID.get(src)}
+const TYPE_TH={use:'ไอเทมใช้ได้',etc:'วัตถุดิบ / ของสะสม',card:'การ์ด'};
+tipHTML=function(e){if(!e||!ITEMS[e.id])return '';const it=ITEMS[e.id],gear=SLOTS.includes(it.t);const rar=e.rar||0,R=RARITY[rar]||RARITY[0];
+  let h='<div class="th"><img src="'+iconURL(e.id)+'" alt=""><div><h5 style="color:'+itemColor(e)+'">'+esc(itemName(e))+'</h5><div>'+(gear?'<span class="rk" style="background:'+R.c+'">'+R.n+'</span>':'')+'<span class="muted" style="font-size:11px">'+(SLOT_TH[it.t]||TYPE_TH[it.t]||it.t)+(it.wt&&GM_WT&&GM_WT[it.wt]?' · '+GM_WT[it.wt]:'')+(it.god?' · GOD':'')+'</span></div></div></div>';
+  const L=itemLines(e).filter(Boolean);h+='<div class="sec">'+L.map(l=>'<div style="'+(l[0]==='◆'?'color:#9ad0ff':l.indexOf('⛔')===0?'color:#ff8a7a':'')+'">'+esc(l)+'</div>').join('')+'</div>';
+  if(gear){const extra=[];if(e.ref)extra.push('ตีบวก +'+e.ref);if(e.sock)extra.push('ช่องการ์ด '+(e.cards||[]).length+'/'+e.sock);if(e.star)extra.push('ดาว GOD '+'★'.repeat(e.star));if(extra.length)h+='<div class="sec muted" style="font-size:11.5px">'+extra.join(' · ')+'</div>'}
+  if(it.d)h+='<div class="ds">'+esc(it.d)+'</div>';
+  if(it.price)h+='<div class="muted" style="font-size:11px;margin-top:4px">ราคาขาย '+(typeof sellPriceOf==='function'?sellPriceOf(e):Math.round(it.price/2)).toLocaleString()+' เหรียญ</div>';return h};
+document.addEventListener('pointerover',e=>{const t=e.target;if(!t||t.tagName!=='IMG'||t.closest('[data-tip]')||t.closest('#tip'))return;const id=iconId(t.src);if(!id)return;const T=$('tip');T.innerHTML=tipHTML({id,rar:0});T.style.display='block';
+  const r=t.getBoundingClientRect(),tw=T.offsetWidth,th=T.offsetHeight;T.style.left=clamp(r.right+8,4,innerWidth-tw-4)+'px';T.style.top=clamp(r.top,4,innerHeight-th-4)+'px';if(r.right+8+tw>innerWidth)T.style.left=Math.max(4,r.left-tw-8)+'px'});
+document.addEventListener('pointerout',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&!t.closest('[data-tip]'))$('tip').style.display='none'});
+/* ---------- pets: ride + damage bonus ---------- */
+function petAtkBonus(){if(!CH||!CH.pet)return 0;return (isBossPet(CH.pet.mid)?10:5)+Math.floor((CH.pet.lv||CH.lv||1)/20)}
+{const _eb=eqBonus;eqBonus=function(ch){const b=_eb(ch);if(ch===CH&&CH.pet){b.atkPct=(b.atkPct||0)+petAtkBonus();if(CH.petRide)b.spd=(b.spd||0)+45}return b}}
+{const _tm=toggleMount;toggleMount=function(){if(W&&W.pet&&CH.pet){CH.petRide=!CH.petRide;if(CH.petRide)CH.riding=false;emit('fx',{k:'buff',x:W.P.x,y:W.P.y,c:'#ffd75e'});emit('float',{t:W.P,s:CH.petRide?'ขี่ '+CH.pet.name+' · ความเร็ว +45%':'ลงจากสัตว์เลี้ยง',c:'#ffd75e'});W.pet.x=W.P.x;W.pet.y=W.P.y;saveAll();return}CH.petRide=false;return _tm()}}
+{const _up=updPet;updPet=function(dt){const p=W.pet,P=W.P;if(p&&CH.petRide&&!P.dead){p.anim.t+=dt;p.x=P.x;p.y=P.y;p.ang=P.ang;p.anim.walk=P.anim.walk;p.anim.atk=0;return}return _up(dt)}}
+{const _se=syncEnt;syncEnt=function(e,dt,T){_se(e,dt,T);const r=E3.get(e);if(!r)return;
+  if(e.kind==='pet'&&e===W.pet){const ride=!!CH.petRide;const k=ride?(e.ps?1.05:1.15):(e.ps||1)*.55;if(ride){r.root.scale.setScalar(1);r.inner.scale.setScalar(k);W.pet.rideH=Math.max(.9,Math.min(3.2,r.h*k*.78))}}
+  if(e===W.P&&CH.petRide&&W.pet){r.inner.position.y=(W.pet.rideH||1.2)+(elevAt?0:0);if(r.m.legs)r.m.legs.forEach(L=>L.rotation.x=-1.25);if(r.cloud)r.cloud.visible=false}
+  if(e.kind==='npc'&&!r.aura){r.aura=1;const ring=new THREE.Mesh(new THREE.RingGeometry(1.1,1.45,32),new THREE.MeshBasicMaterial({color:'#ffd75e',transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.06;r.root.add(ring);
+    const sp=glowSprite('#ffd060',4.2,.32);sp.position.y=1.8;r.root.add(sp);
+    const mk=new THREE.Mesh(new THREE.OctahedronGeometry(.32,0),new THREE.MeshLambertMaterial({color:'#ffd75e',emissive:new THREE.Color('#ffb020'),emissiveIntensity:.9}));mk.position.y=(r.h||3.4)+1.1;r.root.add(mk);r.npcFx={ring,sp,mk,h:mk.position.y}}
+  if(r.npcFx){const f=r.npcFx;f.ring.rotation.z=T*.8;f.ring.material.opacity=.45+.25*Math.sin(T*3);f.sp.material.opacity=.22+.12*Math.sin(T*2.4+e.x);f.mk.rotation.y=T*2;f.mk.position.y=f.h+Math.sin(T*3)*.15}}}
+/* ---------- running light trail ---------- */
+const TRAIL={list:[],t:0};
+function trailCol(){const w=CH&&CH.eq.weapon;const r=w?w.rar||0:0;if(r>=2&&typeof RCOL!=='undefined')return RCOL[r];return CH&&CH.job&&JOBDEF[CH.job]?JOBDEF[CH.job].c1:'#9ad8ff'}
+{const _dw=drawWorld;drawWorld=function(dt){const r=_dw(dt);try{const P=W&&W.P;if(P&&!P.dead&&ACC.settings.trail!==false){const moving=P.anim.walk>0&&P.act&&P.act.type==='move'||CH.petRide&&P.anim.walk>0||P.anim.walk>0;TRAIL.t-=dt;
+    if(moving&&TRAIL.t<=0){TRAIL.t=P.run||CH.petRide||CH.riding?.025:.045;const col=trailCol(),y0=typeof elevAt==='function'?elevAt(P.x,P.y):0;
+      const sp=glowSprite(col,1.6+(P.run?.6:0),.75);sp.position.set(P.x/U+(Math.random()-.5)*.5,y0+.35+Math.random()*.5,P.y/U+(Math.random()-.5)*.5);SCN.add(sp);TRAIL.list.push({sp,t:0,max:.6});
+      if(Math.random()<.5){const s2=glowSprite('#ffffff',.6,.9);s2.position.set(P.x/U+(Math.random()-.5)*.9,y0+.2+Math.random()*1.2,P.y/U+(Math.random()-.5)*.9);SCN.add(s2);TRAIL.list.push({sp:s2,t:0,max:.45,up:1})}}}
+    for(let i=TRAIL.list.length-1;i>=0;i--){const q=TRAIL.list[i];q.t+=dt;const k=q.t/q.max;if(k>=1){SCN.remove(q.sp);q.sp.material.dispose();TRAIL.list.splice(i,1);continue}q.sp.material.opacity=(1-k)*.75;q.sp.scale.multiplyScalar(1-dt*.9);if(q.up)q.sp.position.y+=dt*1.2}}catch(e){}return r}}
 
 /* ===== มอนสเตอร์ร่วมกัน (แบบ "เจ้าบ้าน"): คนที่อยู่ในแมพก่อนคุมมอนทั้งแมพ ส่งสถานะให้คนอื่น · คนอื่นตี → ส่งดาเมจไปให้เจ้าบ้าน · คนตีตัวสุดท้ายได้ EXP/ของ ===== */
 const SH={role:'solo',host:null,map:new Map(),sent:new Map(),mirroring:false,priv:0,dT:0,fT:0,reqT:0,outT:0,out:[],lastFull:0,mapId:null};
