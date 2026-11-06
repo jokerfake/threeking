@@ -3577,7 +3577,8 @@ TILE_COL.push('#9c3a2c','#d9a224');
 /* ---------- elevation ---------- */
 function elevAt(x,y){if(!W||!W.M||!W.M.elev)return 0;for(const s of HL.isles)if((x-s.x)**2+(y-s.y)**2<s.r*s.r)return s.h;
   for(const r of HL.ramps)if(x>=r.x0&&x<=r.x1&&y>=r.y0&&y<=r.y1){const t=r.ax==='y'?(y-r.y0)/(r.y1-r.y0):(x-r.x0)/(r.x1-r.x0);return r.h0+(r.h1-r.h0)*t}
-  const T=HL.terr;if(x>=T.x0&&x<=T.x1&&y>=T.y0&&y<=T.y1)return T.h;return 0}
+  const T=HL.terr;if(x>=T.x0&&x<=T.x1&&y>=T.y0&&y<=T.y1)return T.h;
+  const A=HL.arena;if(A&&W.mapId==='hulao'){const d=Math.hypot(x-A.x,y-A.y)/U-A.r/U;if(d<.8)return .8;if(d<1.9)return .5;if(d<3)return .25}return 0}
 {const _s=scr;scr=function(x,y,h){return _s(x,y,(h||0)+elevAt(x,y))}}
 {const _se=syncEnt;syncEnt=function(e,dt,T){_se(e,dt,T);if(W.M.elev){const r=E3.get(e);if(r)r.root.position.y=elevAt(e.x,e.y)}}}
 {const _sa=syncAll;syncAll=function(dt,T){_sa(dt,T);if(!W.M.elev)return;for(const [g,o] of IT3)o.position.y=elevAt(g.x,g.y);for(const [p,o] of PJ3)o.position.y=1.6+elevAt(p.x,p.y);for(const [ob,o] of OB3)o.position.y=elevAt(ob.x,ob.y)}}
@@ -3889,7 +3890,7 @@ function buildPalace3d(){const S=new THREE.Group(),F=[];const fade=(fn,c)=>{cons
   for(const b of [HLB.west1,HLB.west2,HLB.west3,HLB.east1,HLB.west4]){const [x,y,w,h]=b;pzHall(S,X(x+w/2),0,X(y+h/2),X(w-40),X(h-60),3,{bays:5,ov:1.2,plaque:b!==HLB.east1&&b!==HLB.west4})}
   for(let i=0;i<28;i++){const x=3500+Math.random()*2600,z=2880+Math.random()*240;if(Math.abs(x-4800)<220)continue;Math.random()<.5?pzPine(S,X(x),0,X(z),1):pzTree(S,X(x),0,X(z),.9,'#e898b8')}
   // arena (east court)
-  {const A=HL.arena,ax=X(A.x),az=X(A.y),r=X(A.r);for(let i=0;i<3;i++)pzCyl(S,r+.6+i*1.1,r+1+i*1.1,.5+i*.6,28,i%2?PZ.MARBLE:PZ.MARB2,ax,0,az);pzCyl(S,r+.5,r+.5,.12,28,'#d8c8a0',ax,0,az);
+  {const A=HL.arena,ax=X(A.x),az=X(A.y),r=X(A.r);for(let i=0;i<3;i++)pzCyl(S,r+.6+i*1.1,r+1+i*1.1,.75-i*.25,28,i%2?PZ.MARBLE:PZ.MARB2,ax,0,az);pzCyl(S,r+.5,r+.5,.8,28,'#d8c8a0',ax,0,az);
     for(let i=0;i<8;i++){const a=i/8*TAU;pzCyl(S,.18,.18,5,6,PZ.RED,ax+Math.cos(a)*(r+4),0,az+Math.sin(a)*(r+4));pzBox(S,1,1.5,.08,i%2?'#d02a2a':PZ.GOLD,ax+Math.cos(a)*(r+4),3.2,az+Math.sin(a)*(r+4)+.2)}}
   // sky: islands, ramps, pavilions, clouds
   HL.isles.forEach(s=>pzIsle(S,s));HL.ramps.slice(0,4).forEach(r=>pzRamp(S,r,true));
@@ -4620,13 +4621,14 @@ AR.setTreeStyle('pixel');
 const CHAR2={on:true};
 function c2Mul(d,i,f){d[i]=Math.min(255,d[i]*f);d[i+1]=Math.min(255,d[i+1]*f);d[i+2]=Math.min(255,d[i+2]*f)}
 function c2Post(key,src){const n=16,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(src,0,0,n,n);
-  const im=g.getImageData(0,0,n,n),d=im.data;const kind=key.startsWith('face')?'face':key.startsWith('tor')?'tor':'t';
+  const kind=key.startsWith('face')?'face':key.startsWith('tor')?'tor':'t';let fo0={},custom=false;if(kind==='face'){try{fo0=JSON.parse(key.slice(4))}catch(e){}if(typeof apFace==='function')custom=apFace(g,fo0)}
+  const im=g.getImageData(0,0,n,n),d=im.data;
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){const i=(y*n+x)*4;let f=kind==='face'?1.06-.12*y/15:1.16-.36*y/15;
     if(kind!=='face'){if(y===0||x===0)f*=1.3;else if(y===1||x===1)f*=1.08;if(y===n-1||x===n-1)f*=.5;else if(y===n-2||x===n-2)f*=.8;if(((x+y)&1)&&kind==='t')f*=.97}
     else{if(x===0||x===n-1)f*=.86;if(y>=n-2)f*=.9}c2Mul(d,i,f)}
   g.putImageData(im,0,0);
   if(kind==='face'){let o={};try{o=JSON.parse(key.slice(4))}catch(e){}const ey=(o.ey||4)*2;
-    if(!o.glow&&!o.mask&&!o.opera&&!o.veil&&!o.blank){g.fillStyle='rgba(255,255,255,.95)';g.fillRect(4,ey+2,1,1);g.fillRect(10,ey+2,1,1);g.fillStyle='rgba(0,0,0,.18)';g.fillRect(7,ey+5,2,1);
+    if(!custom&&!o.glow&&!o.mask&&!o.opera&&!o.veil&&!o.blank){g.fillStyle='rgba(255,255,255,.95)';g.fillRect(4,ey+2,1,1);g.fillRect(10,ey+2,1,1);g.fillStyle='rgba(0,0,0,.18)';g.fillRect(7,ey+5,2,1);
       if(o.blush){g.fillStyle='rgba(240,120,130,.45)';g.fillRect(2,ey+5,2,1);g.fillRect(12,ey+5,2,1)}}
     if(o.glow){g.fillStyle='rgba(255,255,255,.8)';g.fillRect(4,ey,1,1);g.fillRect(10,ey,1,1)}}
   return c}
@@ -4651,6 +4653,92 @@ function c2Extra(r,o){const S=1,TW=o.wide?1.25:1.05,HS=o.headS||1.12,hat=o.hat||
   r.legs.forEach(L=>{box(L,.56,.1,.6,0,-.8,.03,M(mixHex(o.boot||'#5a3a22','#ffffff',.15)));box(L,.55,.07,.62,0,-1.12,.05,M('#2a1a10'))});
   if(o.robe)box(body,TW+.14,.1,.7,0,.14,0,M(trim))}
 function char2Set(on){CHAR2.on=on;for(const k in MT)delete MT[k];if(typeof E3!=='undefined'){for(const[,rr]of E3)SCN.remove(rr.root);E3.clear()}}
+
+/* ===== create2.js: ตัวเลือกหน้าตาเพิ่มเติม (ทรงผม 12 · ตา 6 · คิ้ว 3 · ร่องรอย 7 · หนวดเครา 5 · ผิว 6 · สีตา 6 · ชุด 6 · เครื่องประดับ 6 · รูปร่าง 3) ===== */
+const AP={
+  hair:['มวยจุก','หางม้า','ผมตั้ง','แกละ','ยาวปล่อย','มวยสูงปักปิ่น','สั้นเกรียน','หางม้าสูง','มวยคู่','เปียยาว','รวบครึ่ง','โล้น'],
+  hc:['#1a1410','#3a2418','#6a3a1a','#a86a2a','#d8b060','#e8e4dc','#9a9aa8','#7a1a1a','#c83a2a','#2a3a6a','#4a2a6a','#2a5a4a'],
+  skin:['#f6d0b0','#f0c098','#d8a070','#b07848','#8a5a34','#ead6d0'],eyeC:['#1a1420','#4a2a14','#2a4a8a','#2a6a3a','#8a2a2a','#c8a020'],
+  eye:['ปกติ','ตาโต','ตาคม','ตาง่วง','ตายิ้ม','ตาดุ'],brow:['ปกติ','หนา','ขมวด'],mark:['ไม่มี','แผลเป็น','ไฝ','จุดหน้าผาก','ลายรบ','กระ','ผ้าปิดตา'],
+  beard:['ไม่มี','หนวด','เคราแพะ','เคราเต็ม','เครายาว'],outfit:['พลทหาร','บัณฑิต','ชาวนา','นักเดินทาง','ขุนนาง','นักสู้'],acc:['ไม่มี','ผ้าคาดผม','ปิ่นดอกไม้','ต่างหู','ผ้าพันคอ','ขนนก'],body:['เล็ก','ปกติ','สูงใหญ่'],
+  cloth:['#8a3a2a','#2e5a3a','#2a3a6a','#6a4a1a','#5a2a5a','#3a3a3a','#b8862a','#1e6a6a','#a02a4a','#e8e0d0','#4a5a2a','#2a2a4a']};
+let CUR_AP=null;
+{const _lm=lookModel;lookModel=function(L){CUR_AP=L.ap?Object.assign({hs:L.hair||0},L.ap):null;try{return _lm(L)}finally{CUR_AP=null}}}
+{const _pl=playerLook;playerLook=function(ch){const L=_pl(ch);if(ch&&ch.ap)L.ap=ch.ap;return L}}
+function apPre(o,A){const fem=o.face&&o.face.fem;if(A.skin!=null){o.skin=AP.skin[A.skin];o.face.skin=o.skin}
+  if(A.hs>=4){delete o.bun;delete o.pony;delete o.spiky;delete o.twin;o.longHair=false}if(A.hs===11){o.bald=1;o.hair=o.skin||SKIN;o.face.hair=null}if(A.hs===4||A.hs===10)o.longHair=true;
+  Object.assign(o.face,{eye:A.eye||0,brow:A.brow||0,mark:A.mark||0,eyeC:AP.eyeC[A.eyeC||0]});if(A.beard>=3&&!fem)o.face.beard=o.hair;
+  const cl=o.cloth,dk=mixHex(cl,'#000000',.45);
+  if(A.outfit===1){o.robe=cl;o.tor=Object.assign({},o.tor,{robe:1,trim:'#efe2c0',belt:dk})}
+  if(A.outfit===2){o.sleeve=mixHex(cl,'#e8d8b0',.45);o.pants=mixHex(cl,'#e8d8b0',.25);o.tor=Object.assign({},o.tor,{belt:'#6a4a24'})}
+  if(A.outfit===3){o.cape=mixHex(cl,'#000000',.3);o.boot='#4a3018'}
+  if(A.outfit===4){o.robe=cl;o.tor=Object.assign({},o.tor,{robe:1,trim:'#e0b44a',belt:'#e0b44a',buckle:'#fff0a0'});o.cape=mixHex(cl,'#e0b44a',.25)}
+  if(A.outfit===5){o.sleeve=o.skin||SKIN;o.tor=Object.assign({},o.tor,{strap:'#3a2418',belt:'#c03020'});o.glove=o.glove||'#3a2418'}
+  if(A.body===0)o.scale=(o.scale||1)*.9;if(A.body===2){o.scale=(o.scale||1)*1.07;o.wide=true}
+  if(A.acc===1&&!o.band)o.band=pickHex(cl)}
+function pickHex(c){return mixHex(c,'#ffffff',.25)}
+function apPost(r,o,A){const head=r.head,body=r.body,HS=o.headS||1.12,hm=M(o.hair),hat=o.hat||'',fem=o.face&&o.face.fem;const helm=hat==='helm'||hat==='hood';
+  if(!helm&&!o.bald){const hs=A.hs;
+    if(hs===4){box(head,HS+.08,1.5,.2,0,HS*.25,-HS/2-.08,hm);for(const s of[-1,1])box(head,.14,1.0,.3,s*(HS/2+.06),HS*.3,-HS*.2,hm)}
+    if(hs===5){box(head,.42,.55,.42,0,HS+.3,-.05,hm);box(head,.9,.07,.07,0,HS+.4,-.05,M('#e0b44a'));box(head,.12,.12,.12,.48,HS+.4,-.05,M('#c03020'))}
+    if(hs===7){box(head,.34,.3,.34,0,HS*.95,-HS/2-.1,M('#c03020'));box(head,.28,1.5,.26,0,HS*.2,-HS/2-.22,hm);box(head,.22,.3,.22,0,-.65,-HS/2-.26,hm)}
+    if(hs===8)for(const s of[-1,1]){box(head,.4,.4,.4,s*.34,HS+.2,-.05,hm);box(head,.44,.07,.44,s*.34,HS+.06,-.05,M('#c03020'))}
+    if(hs===9){for(let i=0;i<6;i++)box(head,.24,.26,.24,(i%2?.04:-.04),HS*.7-i*.24,-HS/2-.12-(i>2?.04:0),hm);box(head,.3,.12,.3,0,HS*.7-6*.24+.1,-HS/2-.16,M('#c03020'))}
+    if(hs===10){box(head,HS+.06,1.0,.18,0,HS*.4,-HS/2-.07,hm);box(head,.36,.3,.3,0,HS*.82,-HS/2-.2,hm);box(head,.12,.4,.12,.2,HS*.9,-HS/2-.24,M('#e0b44a'),{r:[0,0,.6]})}}
+  if(!fem){const bc=M(o.hair===o.skin?'#3a2418':o.hair);if(A.beard===1)box(head,.6,.1,.06,0,HS*.27,HS/2+.03,bc);if(A.beard===2)box(head,.24,.3,.14,0,-.05,HS/2-.02,bc);if(A.beard===3)box(head,HS*.9,.3,.5,0,-.02,HS*.15,bc);
+    if(A.beard===4){box(head,.6,.1,.06,0,HS*.27,HS/2+.03,bc);box(head,.5,.95,.16,0,-.35,HS/2-.04,bc);box(head,.3,.3,.12,0,-.95,HS/2-.06,bc)}}
+  if(A.acc===2){box(head,.08,.08,.5,HS/2-.05,HS*.95,-.1,M('#e0b44a'),{r:[.4,0,0]});for(const[dx,dy]of[[0,0],[.1,.08],[-.08,.1],[.06,-.08]])box(head,.13,.13,.13,HS/2+.02+dx,HS*.85+dy,.2+dy*.3,M('#f08ab0'))}
+  if(A.acc===3)for(const s of[-1,1]){box(head,.06,.14,.06,s*(HS/2+.04),HS*.22,0,M('#e0b44a'));box(head,.1,.1,.1,s*(HS/2+.04),HS*.1,0,M('#c03020'))}
+  if(A.acc===4){const sc=M(mixHex(o.cloth,'#ffffff',.35));box(body,(o.wide?1.25:1.05)+.14,.28,.74,0,2.18,0,sc);box(body,.22,.6,.1,.22,1.8,.38,sc,{r:[0,0,-.15]})}
+  if(A.acc===5){box(head,.08,.9,.2,HS/2-.02,HS+.25,-.2,M('#e8e0d0'),{r:[-.5,0,-.4]});box(head,.06,.4,.14,HS/2+.05,HS+.62,-.42,M('#c03020'),{r:[-.6,0,-.4]})}}
+{const _h=human;human=function(o){const A=CUR_AP;if(A){o=Object.assign({},o,{face:Object.assign({},o.face||{})});apPre(o,A)}const r=_h(o);if(A)try{apPost(r,o,A)}catch(e){console.warn('ap',e)}return r}}
+/* 16px face painting (called from char2 post) */
+function apFace(g,o){if(!(o.eye||o.brow||o.mark))return false;const sk=o.skin||SKIN,E=o.eyeC||'#1a1420',hair=o.hair||'#2a1a10',P=(x,y,c)=>{g.fillStyle=c;g.fillRect(x,y,1,1)};const ey=(o.ey||4)*2;
+  if(o.glow||o.mask||o.opera||o.veil)return false;g.fillStyle=sk;g.fillRect(1,ey-3,14,6);const dk=sh(hair,.7),W='#ffffff',LN='#1a1014';
+  for(const side of[0,1]){const X=side?10:3,m=(dx)=>side?X+2-dx:X+dx,e=o.eye||0;
+    if(e===0){for(let i=0;i<3;i++)P(m(i),ey,LN);P(m(0),ey+1,W);P(m(1),ey+1,E);P(m(2),ey+1,E);P(m(0),ey+2,W);P(m(1),ey+2,E);P(m(2),ey+2,E);P(m(1),ey+1,'#ffffff');if(o.fem)P(m(-1),ey,LN)}
+    if(e===1){for(let i=0;i<3;i++)P(m(i),ey-1,LN);for(let y=0;y<3;y++)for(let i=0;i<3;i++)P(m(i),ey+y,i===0&&y<2?W:E);P(m(1),ey,W);P(m(2),ey+2,sh(E,1.5));if(o.fem){P(m(-1),ey-1,LN);P(m(-1),ey-2,LN)}}
+    if(e===2){P(m(0),ey+1,LN);P(m(1),ey+1,LN);P(m(2),ey,LN);P(m(0),ey+2,W);P(m(1),ey+2,E);P(m(2),ey+1,E)}
+    if(e===3){for(let i=0;i<3;i++)P(m(i),ey+1,LN);P(m(0),ey+2,E);P(m(1),ey+2,E);P(m(2),ey+2,W)}
+    if(e===4){P(m(0),ey+2,LN);P(m(1),ey+1,LN);P(m(2),ey+2,LN)}
+    if(e===5){P(m(0),ey+1,LN);P(m(1),ey,LN);P(m(2),ey,LN);P(m(0),ey+2,W);P(m(1),ey+1,E);P(m(1),ey+2,E);P(m(2),ey+1,W)}
+    const b=o.brow||0,by=ey-2;if(b===0)for(let i=0;i<3;i++)P(m(i),by,dk);if(b===1)for(let i=-1;i<3;i++){P(m(i),by,hair);P(m(i),by-1,hair)}if(b===2){P(m(0),by-1,hair);P(m(1),by,hair);P(m(2),by+1,hair);P(m(2),by,hair)}}
+  const mk=o.mark||0;if(mk===1){g.fillStyle='#a04a3a';for(let i=0;i<7;i++)P(9+Math.round(i*.6),ey-3+i,'#a04a3a')}if(mk===2)P(12,ey+4,'#3a2418');if(mk===3){P(7,ey-4,'#d02a2a');P(8,ey-4,'#d02a2a');P(7,ey-5,'#e04a3a');P(8,ey-3,'#e04a3a')}
+  if(mk===4){for(const x of[3,4,5,10,11,12])P(x,ey+4,'#c82a2a');P(4,ey+5,'#c82a2a');P(11,ey+5,'#c82a2a')}if(mk===5)for(const[x,y]of[[3,4],[5,4],[4,5],[10,4],[12,4],[11,5]])P(x,ey+y,'#b8704a');
+  if(mk===6){g.fillStyle='#14100e';g.fillRect(9,ey-1,5,5);g.fillRect(0,ey-3,16,1)}return true}
+/* ---------- creation UI (tabs) ---------- */
+const AP_DEF=()=>({eye:0,brow:0,mark:0,beard:0,skin:1,eyeC:0,outfit:0,acc:0,body:1});
+{const st=document.createElement('style');st.textContent=`
+.crt{grid-template-columns:260px minmax(0,1fr)!important}@media (max-width:640px){.crt{grid-template-columns:1fr!important}.crt .pv canvas{width:200px;height:262px}}
+.aptabs{display:flex;gap:2px;margin-top:10px;border-bottom:1px solid var(--bronze2);overflow-x:auto}.aptabs button{background:none;border:0;color:var(--muted);font:inherit;font-size:13px;padding:7px 11px;cursor:pointer;white-space:nowrap;border-radius:6px 6px 0 0}
+.aptabs button.on{background:rgba(232,184,74,.22);color:#ffe08a;font-weight:700}.apbody{min-height:250px;max-height:52vh;overflow-y:auto;padding-top:4px}.apbody .seg{display:flex;flex-wrap:wrap;gap:4px}.apbody .sw{display:flex;flex-wrap:wrap;gap:5px}
+.aprnd{float:right;margin-top:-30px}`;document.head.appendChild(st)}
+let APTAB=0;
+function apUI(){const box=$('apBox');if(!box||!CR)return;const A=CR.ap;
+  const chips=(lab,arr,get,set,note)=>'<label>'+lab+(note?' <span style="opacity:.6">'+note+'</span>':'')+'</label><div class="seg">'+arr.map((t,i)=>'<button type="button" data-k="'+set+'" data-v="'+i+'" class="'+(get===i?'on':'')+'">'+t+'</button>').join('')+'</div>';
+  const sws=(lab,arr,get,set)=>'<label>'+lab+'</label><div class="sw">'+arr.map((c,i)=>'<button type="button" style="background:'+c+'" data-k="'+set+'" data-v="'+i+'" class="'+(get===i?'on':'')+'" aria-label="'+lab+' '+(i+1)+'"></button>').join('')+'</div>';
+  const T=[()=>chips('ดวงตา',AP.eye,A.eye,'eye')+chips('คิ้ว',AP.brow,A.brow,'brow')+chips('ร่องรอย',AP.mark,A.mark,'mark')+(CR.g==='m'?chips('หนวดเครา',AP.beard,A.beard,'beard'):'')+sws('สีผิว',AP.skin,A.skin,'skin')+sws('สีตา',AP.eyeC,A.eyeC,'eyeC'),
+    ()=>chips('ทรงผม',AP.hair,CR.hair,'hair')+sws('สีผม',AP.hc,AP.hc.indexOf(CR.hc),'hc'),()=>chips('ชุด',AP.outfit,A.outfit,'outfit','(สีชุดจะเปลี่ยนตามอาชีพเมื่อเปลี่ยนอาชีพ)')+sws('สีชุด',AP.cloth,AP.cloth.indexOf(CR.cloth),'cloth'),
+    ()=>chips('เครื่องประดับ',AP.acc,A.acc,'acc'),()=>chips('รูปร่าง',AP.body,A.body,'body')];
+  box.innerHTML='<div class="aptabs">'+['หน้าตา','ทรงผม','ชุด','เครื่องประดับ','รูปร่าง'].map((t,i)=>'<button type="button" data-tab="'+i+'" class="'+(i===APTAB?'on':'')+'">'+t+'</button>').join('')+'</div><div class="apbody">'+T[APTAB]()+'</div>';}
+function apInit(){if($('apBox'))return;const g=$('cG');if(!g)return;['cHair','cHc','cCl'].forEach(id=>{const e=$(id);if(!e)return;e.style.display='none';const l=e.previousElementSibling;if(l&&l.tagName==='LABEL')l.style.display='none'});
+  const rb=document.createElement('button');rb.type='button';rb.className='btn ghost sm aprnd';rb.id='apRnd';rb.textContent='🎲 สุ่มหน้าตา';g.after(rb);const box=document.createElement('div');box.id='apBox';rb.after(box);
+  const pv=$('pvC');if(pv){pv.width=260;pv.height=340}
+  g.addEventListener('click',()=>setTimeout(apUI,0));
+  rb.onclick=()=>{const R=n=>Math.floor(Math.random()*n);CR.g=Math.random()<.5?'m':'f';CR.hair=R(12);CR.hc=AP.hc[R(12)];CR.cloth=AP.cloth[R(12)];CR.ap={eye:R(6),brow:R(3),mark:Math.random()<.5?0:R(7),beard:CR.g==='m'&&Math.random()<.4?R(5):0,skin:R(6),eyeC:R(6),outfit:R(6),acc:R(6),body:R(3)};
+    [...g.children].forEach(x=>x.classList.toggle('on',x.dataset.v===CR.g));apUI()};
+  box.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab!=null){APTAB=+b.dataset.tab;apUI();return}const k=b.dataset.k,v=+b.dataset.v;
+    if(k==='hair')CR.hair=v;else if(k==='hc')CR.hc=AP.hc[v];else if(k==='cloth')CR.cloth=AP.cloth[v];else CR.ap[k]=v;apUI()};}
+{const _sc=showCreate;showCreate=function(slot,edit){_sc(slot);apInit();CR.ap=AP_DEF();CR.edit=false;APTAB=0;const nm=$('cName'),ok=$('cOk');nm.disabled=false;ok.textContent='สร้างตัวละคร';
+  const ch=edit?ACC.chars[slot]:null;if(ch){CR.edit=true;CR.g=ch.g;CR.hair=ch.hair||0;CR.hc=ch.hc;CR.cloth=ch.cloth;CR.ap=Object.assign(AP_DEF(),ch.ap||{});nm.value=ch.name;nm.disabled=true;ok.textContent='บันทึกหน้าตา';
+    [...$('cG').children].forEach(x=>x.classList.toggle('on',x.dataset.v===CR.g))}
+  const h1=document.querySelector('#create .logo h1');if(h1)h1.textContent=edit?'แต่งหน้าตาตัวละคร':'สร้างตัวละคร';apUI()}}
+{const _dp=drawPrevRot;drawPrevRot=function(canvas,look,T){if(canvas&&canvas.id==='pvC'&&CR)look=Object.assign({},look,{g:CR.g,hair:CR.hair,hc:CR.hc,cloth:CR.cloth,ap:CR.ap,weapon:null,shield:false});return _dp(canvas,look,T)}}
+{const _nc=newChar;newChar=function(o){const ch=_nc(o);if(o&&o.ap)ch.ap=Object.assign({},o.ap);else if(CR&&$('create').classList.contains('show')&&!CR.edit)ch.ap=Object.assign({},CR.ap);return ch}}
+$('cOk').addEventListener('click',e=>{if(!CR||!CR.edit)return;e.stopImmediatePropagation();e.preventDefault();const ch=ACC.chars[CR.slot];if(!ch)return;
+  Object.assign(ch,{g:CR.g,hair:CR.hair,hc:CR.hc,cloth:CR.cloth,ap:Object.assign({},CR.ap)});saveAll();try{if(typeof flushCloud==='function')flushCloud()}catch(_){}$('create').classList.remove('show');toast('บันทึกหน้าตาใหม่แล้ว');showLogin()},true);
+{const _sl=showLogin;showLogin=function(){_sl();document.querySelectorAll('#slots [data-play]').forEach(b=>{const i=+b.dataset.play;if(b.parentElement.querySelector('[data-edit]'))return;const e=document.createElement('button');e.type='button';e.className='btn ghost sm';e.dataset.edit=i;e.textContent='แต่งหน้า';b.after(e)})}}
+$('slots').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(!b)return;e.stopPropagation();showCreate(+b.dataset.edit,true)},true);
 
 /* ===== อุปกรณ์อลังการตามระดับ (SR→GOD) + เอฟเฟกต์สกิลยิ่งใหญ่ ===== */
 const RCOL=['#e8e4d8','#6ad07a','#5aa8ff','#c07aff','#ffd75e','#ff4a4a','#ff8af0'];
@@ -5670,6 +5758,18 @@ html,body{overscroll-behavior:none;-webkit-touch-callout:none}
   setInterval(()=>{if(INGAME)saveAll()},15000);
   /* autobar: split icon/label so small screens show icons only */
   const ab=$('autobar');if(ab)for(const b of ab.querySelectorAll('button')){if(b.id==='btnOnline'||b.querySelector('.t'))continue;const t=b.textContent.trim(),i=t.indexOf(' ');if(i<0)continue;b.title=b.title||t.slice(i+1);b.setAttribute('aria-label',t.slice(i+1));b.innerHTML='<span>'+t.slice(0,i)+'</span><span class="t"> '+t.slice(i+1)+'</span>'}})();
+
+/* ===== roundui.js: มุมโค้งมนทั้ง UI ===== */
+{const st=document.createElement('style');st.id='roundUI';st.textContent=`
+.panel,#chat,#mini,#qtrack,#partyhud .m,#menu,#mbar,#toast,#tip,.dbox,.crt,.cslot,.lbox,.npc,.detail,.der,.bossrow,.li,.wmap div,.mpv,.cbox,#hotbar,#hot{border-radius:14px!important}
+.win{border-radius:16px!important;overflow:hidden}.win header{border-radius:15px 15px 0 0}.win header button{border-radius:8px!important}
+#chat{overflow:hidden}#chat input{border-radius:0 0 0 13px}#chat .tabs button{border-radius:8px 8px 0 0}
+#mini canvas{border-radius:10px!important}#status .por,.por{border-radius:12px!important;overflow:hidden}#status .por em{border-radius:8px 0 10px 0}
+.slot{border-radius:10px!important}.slot img,.slot canvas{border-radius:8px}#buffs div{border-radius:8px!important}
+.btn,#menu button,.tabs2 button,.seg button,.stats .pl,button.sm{border-radius:9px!important}.sw button{border-radius:8px!important}
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{border-radius:9px!important}
+.crt .pv{border-radius:12px!important;overflow:hidden}.bar{border-radius:7px!important}.bar i{border-radius:7px}
+.aptabs button{border-radius:8px 8px 0 0!important}.inv-grid .s,.invs,.doll .eq{border-radius:9px!important}`;document.head.appendChild(st)}
 
 authBoot();
 
