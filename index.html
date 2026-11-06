@@ -4365,7 +4365,7 @@ function abPlane(B,tag,w,h,col,x,y,z,ry,rx){abPush(B,tag,AR.G.plane.clone(),col,
 function abBuild(B,shared){const out=new THREE.Group(),mats=[];const c=new THREE.Color();
   for(const tag in B.T){const L=B.T[tag];if(!L.length)continue;let n=0;for(const[g]of L)n+=g.attributes.position.count;const uvOn=tag==='roof'||tag==='win';
     const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),uv=uvOn?new Float32Array(n*2):null;let o=0;
-    for(const[g,cc]of L){const k=g.attributes.position.count;pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);c.set(cc||'#ffffff');const vc=g.attributes.color;for(let i=0;i<k;i++){const j=(o+i)*3,f=vc?vc.array[i*3]:1;col[j]=c.r*f;col[j+1]=c.g*f;col[j+2]=c.b*f}if(uv&&g.attributes.uv)uv.set(g.attributes.uv.array,o*2);o+=k;g.dispose()}
+    for(const[g,cc]of L){const k=g.attributes.position.count;pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);c.set(cc||'#ffffff');const vc=g.attributes.color;if(vc&&cc===null)col.set(vc.array.subarray(0,k*3),o*3);else for(let i=0;i<k;i++){const j=(o+i)*3,f=vc?vc.array[i*3]:1;col[j]=c.r*f;col[j+1]=c.g*f;col[j+2]=c.b*f}if(uv&&g.attributes.uv)uv.set(g.attributes.uv.array,o*2);o+=k;g.dispose()}
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));if(uv)geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.computeBoundingSphere();
     const m=shared||AR.MAT[tag].clone();if(!shared)mats.push(m);const mesh=new THREE.Mesh(geo,m);mesh.castShadow=tag!=='win';mesh.receiveShadow=true;out.add(mesh)}
   out.userData.mats=mats;return out}
@@ -4804,6 +4804,33 @@ function a2BrickMat(col,rx,ry){const t=AR.brickT.clone();t.needsUpdate=true;t.re
   for(let i=0;i<n;i++){const o=-L/2+.8+i*1.6;for(const s of[-1,1]){const px=long?o:s*(T/2-.2),pz=long?s*(T/2-.2):o;add(new THREE.BoxGeometry(long?.85:.4,.75,long?.4:.85),mm,px,H+.5,pz);add(new THREE.BoxGeometry(long?.95:.5,.12,long?.5:.95),cap,px,H+.93,pz)}}
   g.userData.wall=true;g.userData.mats=[];return g}}
 
+/* ===== mountain.js: เสาหินเทียนจู้แบบใหม่ — ชั้นหินมีแสงเงา หิ้งมอส ต้นสนพิกเซล เถาวัลย์ น้ำตก ===== */
+const ROCK=['#3a342c','#4a4236','#5a5042','#6a5e4c','#7a6c56','#8a7a62','#9a8a70','#aa9a7e'],MOSS=['#1e3a1e','#2a5024','#3a6a2a','#4e8432','#6aa03c','#8cbc52'];
+const MSUN=new THREE.Vector3(.55,.75,.5).normalize();
+function mColorize(g,ramp,fn){const P=g.attributes.position,N=g.attributes.normal,C=new Float32Array(P.count*3),c=new THREE.Color();
+  for(let i=0;i<P.count;i++){const l=N.getX(i)*MSUN.x+N.getY(i)*MSUN.y+N.getZ(i)*MSUN.z;const t=fn(P.getX(i),P.getY(i),P.getZ(i),l,N.getY(i));c.set(ramp[Math.max(0,Math.min(ramp.length-1,Math.floor(t*ramp.length)))]);C[i*3]=c.r;C[i*3+1]=c.g;C[i*3+2]=c.b}
+  g.setAttribute('color',new THREE.BufferAttribute(C,3));return g}
+function mJitter(g,r,amt){const P=g.attributes.position,m=new Map();for(let i=0;i<P.count;i++){const k=P.getX(i).toFixed(2)+','+P.getY(i).toFixed(2)+','+P.getZ(i).toFixed(2);let s=m.get(k);if(s==null){s=1+(r()-.5)*amt;m.set(k,s)}P.setX(i,P.getX(i)*s);P.setZ(i,P.getZ(i)*s)}return g}
+const tzPillarOld=tzPillar;tzPillar=function(p){const g=new THREE.Group(),X=pzX,x=X(p.x),z=X(p.y),R=X(p.r),H=p.h,r=rng(Math.floor(p.seed*1e6)),B=abNew();
+  const segs=Math.max(5,Math.round(H/3.4));let y=0,rad=R,ox=0,oz=0;const ledges=[];
+  for(let i=0;i<segs;i++){const hh=H/segs*(.85+r()*.3),r0=rad*(.96+r()*.08),r1=r0*(.9+r()*.06),dx=(r()-.5)*.5,dz=(r()-.5)*.5;
+    let geo=new THREE.CylinderGeometry(r1,r0,hh,13,3,true).toNonIndexed();mJitter(geo,r,.16);geo.translate(x+ox+dx,y+hh/2,z+oz+dz);geo.computeVertexNormals();
+    const y0=y;mColorize(geo,ROCK,(vx,vy,vz,l)=>{const tf=(vy-y0)/hh;let t=.36+.2*l+.1*tf+(r()-.5)*.05;if(tf<.12)t-=.14;if(tf>.9)t+=.05;return t});abPush(B,'body',geo,null);
+    if(r()<.75){let lg=new THREE.CylinderGeometry(r1*1.07,r1*.98,.45,13,1).toNonIndexed();mJitter(lg,r,.12);lg.translate(x+ox+dx,y+hh,z+oz+dz);lg.computeVertexNormals();
+      mColorize(lg,MOSS,(vx,vy,vz,l,ny)=>ny>.5?.45+.4*l+(r()-.5)*.2:.15+.3*l);abPush(B,'body',lg,null);ledges.push([x+ox+dx,y+hh,z+oz+dz,r1])}
+    y+=hh;rad=r1*1.02;ox+=dx*.6;oz+=dz*.6}
+  /* mossy crown */
+  let cap=new THREE.CylinderGeometry(rad*.95,rad*1.05,1.2,13,1).toNonIndexed();mJitter(cap,r,.15);cap.translate(x+ox,y+.5,z+oz);cap.computeVertexNormals();mColorize(cap,MOSS,(a,b,c2,l,ny)=>ny>.5?.55+.35*l+(r()-.5)*.15:.25+.3*l);abPush(B,'body',cap,null);
+  const top=y+1.1;const nT=3+Math.floor(r()*4);for(let i=0;i<nT;i++){const a=r()*6.28,d=r()*rad*.6;const kind=p.pink&&i===0?'tree2':r()<.75?'ftree0':'ftree1';const tg=treeGeo(kind,Math.floor(r()*3),true).clone();const s=.7+r()*.5;
+    tg.applyMatrix4(new THREE.Matrix4().compose(AVv(x+ox+Math.cos(a)*d,top-.1,z+oz+Math.sin(a)*d),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,r()*6,0)),AVv(s,s,s)));abPush(B,'body',tg,null)}
+  for(const[lx,ly,lz,lr]of ledges)if(r()<.45){const a=r()*6.28;const tg=treeGeo(r()<.5?'ftree0':'tree0',Math.floor(r()*3),true).clone();const s=.45+r()*.3;tg.applyMatrix4(new THREE.Matrix4().compose(AVv(lx+Math.cos(a)*lr*.95,ly+.2,lz+Math.sin(a)*lr*.95),new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.cos(a)*.4,0,-Math.sin(a)*.4)),AVv(s,s,s)));abPush(B,'body',tg,null)}
+  /* hanging vines */
+  for(let i=0;i<6;i++){const a=r()*6.28,yy=top-2-r()*H*.5,L=2+r()*5,cx=x+ox+Math.cos(a)*(rad*1.0),cz=z+oz+Math.sin(a)*(rad*1.0);abBox(B,'body',.18,L,.18,MOSS[2+Math.floor(r()*3)],cx,yy-L/2,cz)}
+  const m=abBuild(B,AR.TREEM);a2Keep(m);g.add(m);
+  if(p.fall){const fx=x+R*.95,fz=z+R*.55,ht=top*.85;const wm=pzMat('#e0f4ff',{transparent:true,opacity:.72,emissive:'#7ab8e0',emissiveIntensity:.45,side:THREE.DoubleSide});
+    pzAdd(g,new THREE.PlaneGeometry(1.4,ht),wm,fx,ht/2,fz,{ry:-.6});pzAdd(g,new THREE.PlaneGeometry(.7,ht),wm,fx+.35,ht/2,fz+.4,{ry:-.6});for(let i=0;i<4;i++)pzAdd(g,new THREE.SphereGeometry(.9+i*.3,8,6),pzMat('#ffffff',{transparent:true,opacity:.55}),fx+(r()-.5)*1.2,.3,fz+(r()-.5)*1.2)}
+  return g};
+
 /* ===== อุปกรณ์อลังการตามระดับ (SR→GOD) + เอฟเฟกต์สกิลยิ่งใหญ่ ===== */
 const RCOL=['#e8e4d8','#6ad07a','#5aa8ff','#c07aff','#ffd75e','#ff4a4a','#ff8af0'];
 /* ---------- look: weapon/armor rarity, refine ---------- */
@@ -4900,7 +4927,9 @@ function sellHTML(){const f=NPCSTATE.sf||'all';const sel=NPCSTATE.sel||(NPCSTATE
   const rows=sellRows().filter(o=>selMatch(o.s,f));let tot=0,qn=0;for(const s of sel){tot+=sellPriceOf(s)*(s.n||1);qn++}
   h+='<div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:6px;align-items:center"><button class="btn alt sm" type="button" data-selall="1" '+(rows.length?'':'disabled')+'>เลือกทั้งหมดในหมวดนี้ ('+rows.length+')</button><button class="btn ghost sm" type="button" data-selclr="1" '+(sel.size?'':'disabled')+'>ล้างที่เลือก</button><button class="btn sm" type="button" data-sellsel="1" '+(sel.size?'':'disabled')+' style="margin-left:auto">'+(confirmKey==='sellsel'?'ยืนยันขาย '+qn+' รายการ!':'ขายที่เลือก '+qn+' รายการ · '+tot.toLocaleString()+' เหรียญ')+'</button></div>';
   if(!rows.length)h+='<p class="muted">ไม่มีของในหมวดนี้</p>';
-  rows.forEach(o=>{const s=o.s,on=sel.has(s),god=ITEMS[s.id].god;h+='<div class="li" style="grid-template-columns:22px 34px 1fr auto;'+(on?'background:rgba(255,200,80,.12);border-color:#c8902a':'')+'"><input type="checkbox" data-selone="'+o.i+'" '+(on?'checked':'')+(god?' disabled title="อาวุธ GOD ต้องขายทีละชิ้น"':'')+'><img src="'+iconURL(s.id)+'" alt="" data-tip="inv:'+o.i+'"><div><b style="color:'+itemColor(s)+'">'+esc(itemName(s))+(s.n>1?' ×'+s.n:'')+'</b>'+(s.rar?' <span class="muted">'+RARITY[s.rar].n+'</span>':'')+'<small>ขายได้ชิ้นละ '+sellPriceOf(s)+'</small></div><div class="row"><button class="btn sm" type="button" data-sell="'+o.i+'">ขาย 1</button>'+(s.n>1?'<button class="btn alt sm" type="button" data-sellall="'+o.i+'">ขายหมด</button>':'')+'</div></div>'});
+  h+='<div class="sgrid">';rows.forEach(o=>{const s=o.s,on=sel.has(s),god=ITEMS[s.id].god,rc=s.rar!=null&&isGear(s.id)?RARITY[s.rar||0].c:'#3a4050';
+    h+='<div class="sc'+(on?' on':'')+(god?' god':'')+'" '+(god?'':'data-selone="'+o.i+'"')+' style="--rc:'+rc+'"><img src="'+iconURL(s.id)+'" alt="'+esc(itemName(s))+'" data-tip="inv:'+o.i+'">'+(s.n>1?'<i>'+s.n+'</i>':'')+(on?'<em>✓</em>':'')+'<small>'+sellPriceOf(s).toLocaleString()+'</small>'+(god?'<button class="btn sm" type="button" data-sell="'+o.i+'">ขาย</button>':'')+'</div>'});h+='</div>';
+  if(rows.length)h+='<p class="muted" style="font-size:11.5px;margin-top:6px">แตะไอคอนเพื่อเลือก/ยกเลิก · ดับเบิลคลิกเพื่อขาย 1 ชิ้นทันที · ชี้ค้างเพื่อดูรายละเอียด · ตัวเลขใต้ไอคอน = ราคาขายต่อชิ้น · อาวุธ GOD ขายทีละชิ้นด้วยปุ่มใต้ไอคอน</p>';
   return h}
 {const _sh=shopHTML;shopHTML=function(id){if(NPCSTATE.tab!=='sell')return _sh(id);let h=_sh(id);const k='<div class="list">';const i=h.indexOf(k);if(i<0)return h;return h.slice(0,i+k.length)+sellHTML()+'</div>'}}
 $('wNpcB').addEventListener('click',e=>{const b=e.target.closest('[data-sf],[data-selall],[data-selclr],[data-sellsel],[data-selone]');if(!b)return;e.stopImmediatePropagation();const d=b.dataset;const sel=NPCSTATE.sel||(NPCSTATE.sel=new Set());
@@ -5722,6 +5751,37 @@ function trailCol(){const w=CH&&CH.eq.weapon;const r=w?w.rar||0:0;if(r>=2&&typeo
       if(Math.random()<.5){const s2=glowSprite('#ffffff',.6,.9);s2.position.set(P.x/U+(Math.random()-.5)*.9,y0+.2+Math.random()*1.2,P.y/U+(Math.random()-.5)*.9);SCN.add(s2);TRAIL.list.push({sp:s2,t:0,max:.45,up:1})}}}
     for(let i=TRAIL.list.length-1;i>=0;i--){const q=TRAIL.list[i];q.t+=dt;const k=q.t/q.max;if(k>=1){SCN.remove(q.sp);q.sp.material.dispose();TRAIL.list.splice(i,1);continue}q.sp.material.opacity=(1-k)*.75;q.sp.scale.multiplyScalar(1-dt*.9);if(q.up)q.sp.position.y+=dt*1.2}}catch(e){}return r}}
 
+/* ===== reclass.js: เปลี่ยนอาชีพใหม่ — ผู้เล่น: ซื้อยาเปลี่ยนวิชา 100,000 + เควสล่า 30 ตัว · GM: เปลี่ยนได้ทันที ===== */
+ITEMS.job_elixir={n:'ยาเปลี่ยนวิชา',t:'etc',price:100000,ic:['pot','#c070ff'],d:'ยาหายากจากครูฝึกพลอาสา ใช้ร่วมกับเควส "ทางเลือกใหม่" เพื่อเปลี่ยนเป็นอาชีพอื่น · ค่าสกิลที่ลงไว้จะคืนเป็นแต้มทั้งหมด'};
+const RC_COST=100000,RC_NEED=30;
+function rcMinLv(){return Math.max(1,CH.lv-15)}
+function reclass(id,free){const J=JOBDEF[id];if(!J||CH.job===id)return false;
+  if(!CH.job){if(free){CH.jlv=Math.max(CH.jlv,10)}return changeJob(id)}
+  const old=JOBDEF[CH.job];let pts=0;for(const k in CH.sk)pts+=CH.sk[k]||0;pts-=1+(CH.job2?1:0);
+  for(const k of Object.keys(CH.sk)){const i=CH.hot.findIndex(h=>h&&h.id===k);if(i>=0)CH.hot[i]=null}
+  CH.sk={};CH.sk[J.sk[0]]=1;if(CH.job2)CH.sk[J.ult2]=1;CH.skillp=(CH.skillp||0)+Math.max(0,pts);CH.job=id;
+  const w={id:J.start,n:1,u:UID++,rar:1,aff:[],ref:0,sock:1,cards:[]};if(CH.eq.weapon)CH.inv.push(CH.eq.weapon);CH.eq.weapon=w;
+  if(CH.eq.shield&&!J.look.shield&&!['sword'].includes(id)){CH.inv.push(CH.eq.shield);CH.eq.shield=null}
+  if(!free){const i=CH.inv.findIndex(s=>s.id==='job_elixir');if(i>=0)removeItem(CH,i,1);CH.rq=null}
+  emit('jobchange',{id,second:false});emit('look',{});try{autoHot()}catch(e){}saveAll();if(typeof hudUpdate==='function')hudUpdate();
+  log('เปลี่ยนอาชีพจาก '+old.n+' เป็น '+J.n+(CH.job2?' ('+J.n2+')':'')+' · คืนแต้มสกิล '+Math.max(0,pts),'sys');banner('เปลี่ยนอาชีพ!',J.n+(CH.job2?' · '+J.n2:''));return true}
+{const _k=kill;kill=function(t,src){const r=_k(t,src);try{if(CH&&CH.rq&&t.kind==='mon'&&t.dead&&!t.arena&&(t.def.lv||t.lv||0)>=rcMinLv()&&CH.rq.n<RC_NEED){CH.rq.n++;if(CH.rq.n===RC_NEED){toast('เควส "ทางเลือกใหม่" สำเร็จ! กลับไปหาครูฝึกพลอาสา');SFX.win&&SFX.win()}else if(CH.rq.n%5===0)log('ทางเลือกใหม่ '+CH.rq.n+'/'+RC_NEED,'sys')}}catch(e){}return r}}
+function rcHTML(){const gm=typeof isGM==='function'&&isGM();const has=countItem(CH,'job_elixir')>0,q=CH.rq,done=q&&q.n>=RC_NEED;let h='<div class="detail" style="margin-top:10px"><b style="color:#d8a0ff;font-size:14px">เปลี่ยนอาชีพใหม่</b>';
+  if(gm)h+='<p class="muted" style="margin:4px 0">โหมด GM · เลือกอาชีพไหนก็ได้ทันที ไม่เสียเงิน ไม่ต้องทำเควส</p>';
+  else if(!CH.job)h+='<p class="muted" style="margin:4px 0">ยังไม่มีอาชีพ · เลือกอาชีพแรกได้ด้านบนเมื่อเลเวลอาชีพถึง 10</p>';
+  else{h+='<p class="muted" style="margin:4px 0">1) ซื้อ ยาเปลี่ยนวิชา '+RC_COST.toLocaleString()+' เหรียญ → 2) รับเควส "ทางเลือกใหม่": ล่ามอน Lv'+rcMinLv()+'+ จำนวน '+RC_NEED+' ตัว → 3) กลับมาเลือกอาชีพใหม่ · แต้มสกิลคืนทั้งหมด เลเวลและขั้นอาชีพคงเดิม</p><div class="row" style="gap:6px;flex-wrap:wrap">';
+    h+=has?'<span class="muted">✔ มียาเปลี่ยนวิชาแล้ว</span>':'<button class="btn sm" type="button" data-rc="buy" '+(CH.coins>=RC_COST?'':'disabled')+'>ซื้อยาเปลี่ยนวิชา · '+RC_COST.toLocaleString()+'</button>';
+    h+=q?'<span style="color:'+(done?'#7cf09a':'#ffd98a')+'">เควสทางเลือกใหม่ '+Math.min(q.n,RC_NEED)+'/'+RC_NEED+(done?' · สำเร็จ!':'')+'</span>':'<button class="btn alt sm" type="button" data-rc="quest" '+(has?'':'disabled')+'>รับเควส "ทางเลือกใหม่"</button>';h+='</div>'}
+  const can=gm||(CH.job&&has&&done);if(can||gm){h+='<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">'+JOB_IDS.filter(id=>id!==CH.job).map(id=>'<button class="btn sm '+(gm?'ghost':'')+'" type="button" data-rc="to:'+id+'" style="border-color:'+JOBDEF[id].c1+';color:'+JOBDEF[id].c1+'">'+(confirmKey==='rc'+id?'ยืนยัน ':'')+'→ '+JOBDEF[id].n+'</button>').join('')+'</div>'}
+  return h+'</div>'}
+{const _rn=renderNpc;renderNpc=function(){_rn();try{const n=NPCSTATE.n;if(n&&n.id==='job'&&INGAME){const b=$('wNpcB');b.insertAdjacentHTML('beforeend',rcHTML())}}catch(e){console.warn(e)}}}
+$('wNpcB').addEventListener('click',e=>{const b=e.target.closest('[data-rc]');if(!b)return;e.stopImmediatePropagation();const v=b.dataset.rc,gm=typeof isGM==='function'&&isGM();
+  if(v==='buy'){if(CH.coins<RC_COST){toast('เหรียญไม่พอ');return}CH.coins-=RC_COST;addItem(CH,'job_elixir',1);SFX.coin&&SFX.coin();toast('ได้รับ ยาเปลี่ยนวิชา');saveAll()}
+  if(v==='quest'){CH.rq={n:0};toast('รับเควส "ทางเลือกใหม่" · ล่ามอน Lv'+rcMinLv()+'+ '+RC_NEED+' ตัว');saveAll()}
+  if(v.startsWith('to:')){const id=v.slice(3);if(confirmKey!=='rc'+id){confirmKey='rc'+id;renderNpc();return}confirmKey=null;
+    if(!gm&&!(CH.rq&&CH.rq.n>=RC_NEED&&countItem(CH,'job_elixir')>0)){toast('ยังทำเงื่อนไขไม่ครบ');return}reclass(id,gm)}
+  renderNpc();if(typeof hudUpdate==='function')hudUpdate()},true);
+
 /* ===== มอนสเตอร์ร่วมกัน (แบบ "เจ้าบ้าน"): คนที่อยู่ในแมพก่อนคุมมอนทั้งแมพ ส่งสถานะให้คนอื่น · คนอื่นตี → ส่งดาเมจไปให้เจ้าบ้าน · คนตีตัวสุดท้ายได้ EXP/ของ ===== */
 const SH={role:'solo',host:null,map:new Map(),sent:new Map(),mirroring:false,priv:0,dT:0,fT:0,reqT:0,outT:0,out:[],lastFull:0,mapId:null};
 const SH_DT=.3,SH_FULL=3;
@@ -5834,6 +5894,21 @@ html,body{overscroll-behavior:none;-webkit-touch-callout:none}
 input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{border-radius:9px!important}
 .crt .pv{border-radius:12px!important;overflow:hidden}.bar{border-radius:7px!important}.bar i{border-radius:7px}
 .aptabs button{border-radius:8px 8px 0 0!important}.inv-grid .s,.invs,.doll .eq{border-radius:9px!important}`;document.head.appendChild(st)}
+
+/* ===== tweaks.js: ร้านขายแบบตาราง · ถ้ำสว่างขึ้น ===== */
+{const st=document.createElement('style');st.textContent=`
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}
+.sgrid .sc{position:relative;height:66px;border:2px solid var(--rc);border-radius:10px;background:#0a0c12;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 -14px 18px -12px var(--rc)}
+.sgrid .sc img{width:36px;height:36px;border-radius:6px;pointer-events:auto}.sgrid .sc small{font-size:10px;color:#ffd98a;line-height:1}
+.sgrid .sc i{position:absolute;right:4px;top:2px;font-style:normal;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000}
+.sgrid .sc em{position:absolute;left:3px;top:2px;font-style:normal;width:16px;height:16px;border-radius:50%;background:#e8b84a;color:#2a1404;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.sgrid .sc.on{background:rgba(255,200,80,.16);outline:2px solid #ffd86a}.sgrid .sc.god{cursor:default;height:84px}.sgrid .sc.god button{padding:1px 8px;font-size:11px;margin-top:2px}
+#wNpcB .list:has(.sgrid){max-height:none}`;document.head.appendChild(st)}
+$('wNpcB').addEventListener('click',e=>{const t=e.target;if(t.tagName==='IMG'&&t.closest('.sgrid .sc[data-selone]')){/* let click bubble to tile */}},true);
+{const _lu=lightUpdate;lightUpdate=function(T,dt){_lu(T,dt);if(W&&W.M&&W.M.theme==='cave'&&!W.dark&&!(W.blackout>0)){HEMI.intensity=Math.max(HEMI.intensity,.62);HEMI.color.set('#d8d0e8');HEMI.groundColor.set('#4a3a30');SUN.intensity=Math.max(SUN.intensity,.38);SUN.color.set('#ffe0b0');
+  const D=CAMS.dist;SCN.fog.near=D+6;SCN.fog.far=D+75;SCN.fog.color.set('#1a1622');if(SCN.background&&SCN.background.isColor)SCN.background.set('#1a1622')}}}
+let LASTSC=null;$('wNpc').addEventListener('click',e=>{const t=e.target.closest('.sgrid .sc[data-selone]');if(!t)return;const i=t.dataset.selone,now=Date.now();
+  if(LASTSC&&LASTSC.i===i&&now-LASTSC.t<450){e.stopPropagation();LASTSC=null;const s=CH.inv[+i];if(s&&NPCSTATE.sel)NPCSTATE.sel.delete(s);const b=document.createElement('button');b.type='button';b.dataset.sell=i;b.style.display='none';$('wNpcB').appendChild(b);b.click();b.remove()}else LASTSC={i,t:now}},true);
 
 authBoot();
 
