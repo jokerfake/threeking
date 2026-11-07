@@ -5050,7 +5050,7 @@ function tryBossTame(idx){const P=W.P;const t=P.act&&P.act.t;
 /* stable UI in party window */
 {const _rp=rParty;rParty=function(){_rp();const L=petList();const box=$('wPartyB');const old=box.querySelector('[data-petrel]');if(old){const li=old.closest('.li');if(li)li.remove()}let h='<div class="detail" style="margin-top:8px"><b>คอกสัตว์เลี้ยง ('+L.length+'/'+PET_MAX+')</b><p class="muted" style="font-size:11.5px;margin:2px 0 6px">มอนสเตอร์ทั่วไป: ขนมล่อสัตว์ (HP < 30%) · บอส: ยันต์ผนึกอสูร (HP < 15%) ขายที่ร้านยา · สัตว์เลี้ยงบอสตัวเล็กลง ตีแรงกว่า และมีสกิลสายฟ้าทุก 12 วินาที</p><div class="list">';
   if(!L.length)h+='<p class="muted">ยังไม่มีสัตว์เลี้ยง</p>';
-  L.forEach((p,i)=>{const act=CH.pet&&CH.pet.mid===p.mid&&CH.pet.name===p.name&&(CH.pet===p||CH.petIdx===i);const B=PET_BUFF[p.mid]||{};h+='<div class="li" style="grid-template-columns:1fr auto"><div><b style="color:'+(p.boss?'#d080ff':'#cfe8ff')+'">'+(p.boss?'★ ':'')+esc(p.name)+'</b> <span class="muted">'+(p.boss?'สัตว์เลี้ยงบอส':'สัตว์เลี้ยง')+'</span><small>'+Object.entries(B).map(([k,v])=>STAT_LABEL[k]+' +'+v).join(' · ')+'</small></div><div class="row">'+(act?'<span class="muted">ติดตามอยู่</span>':'<button class="btn sm" type="button" data-petuse="'+i+'">ให้ติดตาม</button>')+'<button class="btn ghost sm" type="button" data-petfree="'+i+'">'+(confirmKey==='pf'+i?'ยืนยัน':'ปล่อย')+'</button></div></div>'});
+  L.forEach((p,i)=>{const act=CH.pet&&CH.pet.mid===p.mid&&CH.pet.name===p.name&&(CH.pet===p||CH.petIdx===i);const B=PET_BUFF[p.mid]||{};h+='<div class="li" style="grid-template-columns:1fr auto"><div><b style="color:'+(p.boss?'#d080ff':'#cfe8ff')+'">'+(p.boss?'★ ':'')+esc(p.name)+'</b> <span class="muted">'+(p.boss?'สัตว์เลี้ยงบอส':'สัตว์เลี้ยง')+'</span><small>'+Object.entries(B).map(([k,v])=>STAT_LABEL[k]+' +'+v).join(' · ')+(typeof MOUNT_RB!=='undefined'?' · ขี่: '+MOUNT_RB[mountRank(p.mid)].n:'')+'</small></div><div class="row">'+(act?'<span class="muted">ติดตามอยู่</span>':'<button class="btn sm" type="button" data-petuse="'+i+'">ให้ติดตาม</button>')+'<button class="btn ghost sm" type="button" data-petfree="'+i+'">'+(confirmKey==='pf'+i?'ยืนยัน':'ปล่อย')+'</button></div></div>'});
   box.insertAdjacentHTML('beforeend',h+'</div></div>')}}
 $('wPartyB').addEventListener('click',e=>{const b=e.target.closest('[data-petuse],[data-petfree]');if(!b)return;e.stopImmediatePropagation();const L=petList();
   if(b.dataset.petuse!=null){const i=+b.dataset.petuse;CH.pet=L[i];CH.petIdx=i;spawnPet();toast(L[i].name+' ติดตามท่านแล้ว')}
@@ -6160,6 +6160,127 @@ function setTipHTML(e){const sid=e&&SETITEM[e.id];if(!sid)return '';const S=SETS
   for(const n in S.b){const on=c>=+n;h+='<div style="font-size:11.5px;color:'+(on?'#7cf09a':'#6a7a6a')+'">'+n+' ชิ้น: '+Object.keys(S.b[n]).map(k=>(STAT_LABEL[k]||k)+' +'+S.b[n][k]).join(' · ')+'</div>'}return h+'</div>'}
 {const _t=tipHTML;tipHTML=function(e){let h=_t(e);const s=setTipHTML(e);if(s){const i=h.lastIndexOf('<div class="muted"');h=i>0?h.slice(0,i)+s+h.slice(i):h+s}return h}}
 {const _c=itemColor;itemColor=function(e){if(e&&SETITEM[e.id]&&!(e.rar>=3))return '#7cf09a';return _c(e)}}
+
+/* ===== mount.js: ขี่สัตว์เลี้ยงได้โบนัสเพิ่ม · บัฟสัตว์ ×1.5 + โบนัสขี่ (ตัวเล็ก/อีลิท/บอส/MVP) ===== */
+function mountRank(mid){const d=MONS[mid];if(!d)return 0;if(d.boss==='mvp'||mid==='hl_lord')return 3;if(d.boss)return 2;if(d.elite)return 1;return 0}
+const MOUNT_RB=[{n:'สัตว์ขี่ธรรมดา',atkPct:3,def:2,hpPct:3},{n:'สัตว์ขี่อีลิท',atkPct:6,def:4,hpPct:6},{n:'สัตว์ขี่บอส',atkPct:10,def:6,hpPct:10,crit:3},{n:'สัตว์ขี่ราชันย์ MVP',atkPct:15,def:10,hpPct:15,crit:6}];
+function mountBonus(){if(!CH||!CH.pet||!CH.petRide)return {};const r=mountRank(CH.pet.mid),R=MOUNT_RB[r],o={};for(const k in R)if(k!=='n')o[k]=R[k];
+  const B=PET_BUFF[CH.pet.mid]||{};for(const k in B)o[k]=(o[k]||0)+Math.round(B[k]*.5);return o}
+{const _eb=eqBonus;eqBonus=function(ch){const b=_eb(ch);if(ch===CH&&CH.petRide&&CH.pet){const m=mountBonus();for(const k in m)b[k]=(b[k]||0)+m[k]}return b}}
+{const _tm=toggleMount;toggleMount=function(){const was=CH.petRide;const r=_tm();try{if(CH.petRide&&!was&&CH.pet){const m=mountBonus();toast('ขี่ '+CH.pet.name+' · '+MOUNT_RB[mountRank(CH.pet.mid)].n+' · '+Object.keys(m).map(k=>(STAT_LABEL[k]||k)+' +'+m[k]).join(' · '));hudUpdate&&hudUpdate(true)}}catch(e){}return r}}
+
+/* ===== gmbots.js: GM สร้างบอททดสอบ (สูงสุด 100) · 7 อาชีพ · วิ่งรับเควส ล่ามอน ส่งเควส เก็บเลเวลเองเหมือนผู้เล่น · ผู้เล่นอื่นในแมพเห็นด้วย ===== */
+const GB_MAX=100;
+const GB={ents:[],wref:null,pause:false,share:true,sendT:0,infoT:0,saveT:30,pathBudget:0,sel:{n:10,job:'rand',lv:0}};
+const GBJ={sword:{hp:1.25,atk:1,def:1.25,rng:44,dl:1},lancer:{hp:1.15,atk:1.05,def:1.1,rng:58,dl:1.05},demon:{hp:1.1,atk:1.2,def:1,rng:44,dl:1.15},
+  brawler:{hp:1.05,atk:.9,def:.95,rng:40,dl:.6},assassin:{hp:.85,atk:1,def:.8,rng:44,dl:.55,crit:20},archer:{hp:.85,atk:.95,def:.8,rng:220,dl:.9,ranged:1},mage:{hp:.8,atk:1.25,def:.7,rng:180,dl:1.3,magic:1}};
+const GB_N1=['เล่ง','เตียว','ซุน','กวน','จูล่ง','ม้า','ไท่','ลิ','โจ','เกียง','ฮัว','อ้วน','ซือ','หวง','เฉิน','หลี่','หวาง','จาง','หลิว','เผิง','ฟง','หมิง','เทียน','หลง','อวี่'];
+const GB_N2=['เจ้า','หยุน','ฮุย','อู่','เฟย','ต๋ง','เปา','เหยียน','ฟาง','ซิน','เหม่ย','หลิน','อิง','ชาง','ปิง','เคอ','ยวน','หัว','จื้อ','ซาน'];
+const GB_SAY=['มีใครไปปาร์ตี้บ้าง','เควสใกล้เสร็จแล้ว!','ตรงนี้มอนเยอะดี','ใครมีขนมล่อสัตว์ขายบ้าง','เกิดใหม่แล้ว ไปต่อ!','วันนี้ดรอปดีจัง','ตีบวก +7 แตกอีกแล้ว 555','ขอทางหน่อยนะ','สู้ๆ ทุกคน','เลเวลอัปแล้ว!','ไปล่าบอสกันไหม','ใกล้เลื่อนขั้นแล้ว'];
+const GBHAIR=['#1a1a1a','#3a2418','#5a3a1a','#7a4a2a','#2a2a3a','#8a6a3a'];
+function gbData(){ACC.gmbots=ACC.gmbots||[];return ACC.gmbots}
+function gbCanUse(){return ACC.settings.admin&&(!AUTH.ready||isGM())}
+function gbMapOK(){return W&&W.M&&!W.arena&&!W.floor&&!W.M.dungeon}
+function gbMapLv(){const L=W.ents.filter(e=>e.kind==='mon'&&!e.def.boss&&!e.def.elite&&!e.temp).map(e=>e.def.lv||1);if(!L.length)return 10;L.sort((a,b)=>a-b);return L[Math.floor(L.length*.4)]}
+function gbName(){const used=new Set(gbData().map(b=>b.n));for(let k=0;k<200;k++){const n=pick(GB_N1)+pick(GB_N2)+(Math.random()<.5?'':Math.floor(rnd(1,99)));if(!used.has(n)&&n!==CH.name)return n}return 'บอท'+Math.floor(rnd(100,999))}
+function gbCreate(n,job,lv){const D=gbData();n=Math.max(0,Math.min(n|0,GB_MAX-D.length));if(!n){toast('สร้างบอทได้สูงสุด '+GB_MAX+' ตัว');return 0}
+  const jobs=Object.keys(GBJ),base=lv||gbMapLv();for(let i=0;i<n;i++){const j=job==='rand'?jobs[(D.length+i)%jobs.length]:job;
+    D.push({id:'gb'+Date.now().toString(36)+i+Math.floor(rnd(0,1e4)),n:gbName(),job:j,lv:Math.max(1,Math.min(150,Math.round(base+(lv?0:rnd(-3,3))))),exp:0,g:Math.random()<.35?'f':'m',hair:Math.floor(rnd(0,6)),hc:pick(GBHAIR),hat:Math.random()<.5,map:W.mapId,q:null,qd:0,kills:0})}
+  saveAll();gbSync(true);log('GM: สร้างบอททดสอบ '+n+' ตัว ('+D.length+'/'+GB_MAX+')','sys');return n}
+function gbJob2(b){return b.lv>=50}
+function gbLook(b){const tier=b.lv<45?0:b.lv<85?1:2;const sid=b.job+tier;const eq={weapon:{id:'set_'+sid+'_w',rar:b.lv>=90?4:b.lv>=60?3:1}};if(b.hat)eq.head={id:'set_'+sid+'_h'};eq.armor={id:'set_'+sid+'_a'};
+  const fake={g:b.g,hair:b.hair,hc:b.hc,cloth:'#6a5030',eq,job:b.job,job2:gbJob2(b),name:b.n};try{return playerLook(fake)}catch(e){return {g:b.g,hair:b.hair,hc:b.hc,cloth:'#6a5030',weapon:GBJ[b.job]?SET_JOBS[b.job].wt:'sword'}}}
+function gbJobName(b){const J=JOBDEF[b.job];return J?(gbJob2(b)?J.n2:J.n):'พลทหาร'}
+function gbStats(e){const b=e.b,J=GBJ[b.job]||GBJ.sword,lv=b.lv,m=gbJob2(b)?1.25:1;
+  return {maxHp:Math.round((80+lv*28)*J.hp*m),maxSp:30+lv*3,atkMin:(15+lv*5.5)*J.atk*m*.9,atkMax:(15+lv*5.5)*J.atk*m*1.1,def:Math.round((3+lv*.9)*J.def),mdef:0,hit:lv*2+20,flee:Math.round(lv*1.2+10),crit:J.crit||5,delay:J.dl,speed:150,range:J.rng,S:{vit:lv/2,int:lv/3},expMul:1}}
+function gbEnt(b){const [x,y]=freeSpot(220);const e={kind:'rp',gb:1,b,id:'gbe_'+b.id,key:'gb_'+b.id,name:b.n,lv:b.lv,job:gbJobName(b),gn:'',look:gbLook(b),x,y,hx:x,hy:y,r:14,ang:rnd(0,6.28),
+  anim:{atk:0,hit:0,walk:0,t:Math.random()},buffs:{},dead:false,face:1,path:[],repT:rnd(0,1.5),atkT:rnd(0,1),thinkT:rnd(0,1),sayT:rnd(15,60),st:'hunt',acc:rnd(0,.3)};e.hp=gbStats(e).maxHp;return e}
+function gbSync(force){if(!W||!W.M)return;if(!force&&GB.wref===W&&GB.mapId===W.mapId)return;for(const e of GB.ents)gbDrop(e);GB.ents=[];GB.wref=W;GB.mapId=W.mapId;if(!gbMapOK())return;
+  for(const b of gbData())if(b.map===W.mapId)GB.ents.push(gbEnt(b));GB.infoT=0}
+function gbDrop(e){e.dead=true;for(const m of W.ents)if(m.target===e){m.target=null;m.state='return'}}
+/* quest: kill N of a monster that suits the bot's level */
+function gbNewQuest(e){const b=e.b;const L=[...new Set(W.ents.filter(m=>m.kind==='mon'&&!m.def.boss&&!m.temp&&!m.def.trap).map(m=>m.mid))];if(!L.length){b.q=null;return}
+  L.sort((x,y)=>Math.abs((MONS[x].lv||1)-b.lv)-Math.abs((MONS[y].lv||1)-b.lv));const mid=L[Math.floor(Math.random()*Math.min(3,L.length))];b.q={mid,n:Math.floor(rnd(5,12)),c:0};e.st='hunt'}
+function gbGainExp(e,x){const b=e.b;b.exp+=Math.round(x);let up=false;while(b.exp>=expNeed(b.lv)&&b.lv<150){b.exp-=expNeed(b.lv);b.lv++;up=true}
+  if(up){e.lv=b.lv;e.job=gbJobName(b);e.look=gbLook(b);e.hp=gbStats(e).maxHp;GB.infoT=0;if(gbNear(e)){emit('fx',{k:'buff',x:e.x,y:e.y,c:'#ffd75e'});emit('float',{t:e,s:'LEVEL UP! Lv'+b.lv,c:'#ffd75e'})}if(Math.random()<.4)gbSay(e,'เลเวล '+b.lv+' แล้ว!')}}
+function gbNear(e,r){const P=W.P;return Math.abs(e.x-P.x)<(r||1300)&&Math.abs(e.y-P.y)<(r||1300)*.8}
+function gbSay(e,s){e.bubble={s,t:5};if(GB.share&&NET.mc)NET.mc.send({t:'gbc',k:NET.key,i:e.b.id,s})}
+function gbPath(e,x,y){if(GB.pathBudget<=0){e.repT=.15;return}GB.pathBudget--;setPath(e,x,y);e.repT=rnd(1,1.8)}
+function gbHit(e,m,D){const crit=Math.random()*100<D.crit;let dmg=rnd(D.atkMin,D.atkMax)*100/(100+(derive(m).def||0)*3)*(crit?1.5:1);dmg=Math.max(1,Math.round(dmg));
+  e.anim.atk=.28;const near=gbNear(e);const J=GBJ[e.b.job];if(near){if(J.ranged)emit('fx',{k:'arrow',x:e.x,y:e.y-30,tx:m.x,ty:m.y-20});else if(J.magic)emit('fx',{k:'bolt',x:e.x,y:e.y-30,tx:m.x,ty:m.y-20})}
+  if(m.dormant)m.dormant=false;if(!m.target||m.target.dead)m.target=e;m.hp-=dmg;m.anim.hit=.18;m.lastHurt=W.time;if(near)emit('dmg',{t:m,dmg,crit,src:e,kind:'gb'});
+  if(m.hp<=0){m.hp=0;if(near&&typeof shDeathNoReward==='function')shDeathNoReward(m);else{m.dead=true;m.deadT=0;m.target=null;m.path=[];if(!m.temp)m.respawnT=(m.def.boss?1e9:rnd(8,14))}
+    for(const x of GB.ents)if(x.t===m)x.t=null;const b=e.b;b.kills++;gbGainExp(e,(m.def.exp?m.def.exp[0]:10)*3);if(b.q&&b.q.mid===m.mid&&b.q.c<b.q.n){b.q.c++;if(b.q.c>=b.q.n){e.st='turnin';e.t=null;e.path=[]}}}}
+function gbFind(e){const b=e.b,R=1600;let best=null,bd=1e9;for(const m of W.ents){if(m.kind!=='mon'||m.dead||m.net||m.def.boss||m.arena||m.def.trap)continue;if(b.q&&m.mid!==b.q.mid&&Math.abs((m.def.lv||1)-b.lv)>12)continue;
+    const d=Math.hypot(m.x-e.x,m.y-e.y);if(d>R)continue;const busy=m.target&&m.target!==e&&m.target.gb?1:0;const w=d+(b.q&&m.mid===b.q.mid?0:500)+busy*600;if(w<bd){bd=w;best=m}}return best}
+function gbThink(e,dt){const b=e.b,D=gbStats(e);if(e.dead){e.deadT=(e.deadT||0)+dt;if(e.deadT>7){const [x,y]=freeSpot(220);e.x=x;e.y=y;e.dead=false;e.deadT=0;e.hp=D.maxHp;e.path=[];e.t=null;if(Math.random()<.3)gbSay(e,'เกิดใหม่แล้ว ไปต่อ!')}return}
+  e.atkT-=dt;e.repT-=dt;e.thinkT-=dt;e.sayT-=dt;if(e.hp<D.maxHp)e.hp=Math.min(D.maxHp,e.hp+D.maxHp*(e.st==='rest'?.08:.004)*dt);
+  if(e.sayT<=0){e.sayT=rnd(40,120);if(Math.random()<.5)gbSay(e,b.q&&b.q.c>=b.q.n-2&&b.q.c<b.q.n?'อีก '+(b.q.n-b.q.c)+' ตัวเควสเสร็จ!':pick(GB_SAY))}
+  if(!b.q)gbNewQuest(e);
+  if(e.st==='rest'){if(e.hp>=D.maxHp*.9)e.st='hunt';return}
+  if(e.hp<D.maxHp*.25&&!(e.t&&e.t.target===e)){e.st='rest';e.path=[];e.t=null;return}
+  if(e.st==='turnin'){const tx=e.hx,ty=e.hy;if(Math.hypot(e.x-tx,e.y-ty)<60){const Q=b.q;gbGainExp(e,expNeed(b.lv)*rnd(.12,.25));b.qd++;if(gbNear(e)){emit('fx',{k:'buff',x:e.x,y:e.y,c:'#9ad0ff'});emit('float',{t:e,s:'ส่งเควสสำเร็จ!',c:'#9ad0ff'})}if(Math.random()<.5)gbSay(e,'ส่งเควสแล้ว! ('+(MONS[Q.mid]?MONS[Q.mid].n:'')+')');const [x,y]=freeSpot(220);e.hx=x;e.hy=y;gbNewQuest(e);return}
+    if(!e.path.length||e.repT<=0)gbPath(e,tx,ty);moveAlong(e,D.speed,dt);return}
+  let t=e.t;if(t&&(t.dead||t.net))t=e.t=null;
+  if(!t&&e.thinkT<=0){e.thinkT=rnd(.8,1.6);t=e.t=gbFind(e);if(!t&&(!e.path.length)){const a=rnd(0,6.28),r=rnd(200,600);const x=clamp(e.x+Math.cos(a)*r,100,W.M.w-100),y=clamp(e.y+Math.sin(a)*r,100,W.M.h-100);if(!blockedAt(x,y))gbPath(e,x,y)}}
+  if(!t){moveAlong(e,D.speed*.7,dt);return}
+  const rng=D.range+t.r,d=Math.hypot(t.x-e.x,t.y-e.y);
+  if(d>rng){if(!e.path.length||e.repT<=0)gbPath(e,t.x,t.y);moveAlong(e,D.speed,dt);return}
+  e.path=[];e.ang=Math.atan2(t.y-e.y,t.x-e.x);if(e.atkT<=0){e.atkT=D.delay*rnd(.95,1.15);gbHit(e,t,D)}}
+function gbStep(dt){if(!W||!W.P||!INGAME)return;gbSync(false);if(!GB.ents.length||GB.pause)return;GB.pathBudget=8;
+  for(const e of GB.ents){const a=e.anim;a.t+=dt;a.atk=Math.max(0,a.atk-dt);a.hit=Math.max(0,a.hit-dt);a.walk=Math.max(0,a.walk-dt);if(e.bubble){e.bubble.t-=dt;if(e.bubble.t<=0)e.bubble=null}
+    if(gbNear(e,2600))gbThink(e,dt);else{e.acc+=dt;if(e.acc>=.3){gbThink(e,e.acc);e.acc=0}}}
+  GB.saveT-=dt;if(GB.saveT<=0){GB.saveT=60;try{saveAll()}catch(_){}}
+  if(GB.share&&NET.mc){GB.sendT-=dt;GB.infoT-=dt;
+    if(GB.infoT<=0){GB.infoT=5;NET.mc.send({t:'gbi',k:NET.key,b:GB.ents.map(e=>[e.b.id,e.name,e.lv,e.job,e.look])})}
+    if(GB.sendT<=0){GB.sendT=.4;NET.mc.send({t:'gbp',k:NET.key,b:GB.ents.map(e=>[e.b.id,Math.round(e.x),Math.round(e.y),+e.ang.toFixed(2),(e.anim.atk>.15?1:0)|(e.dead?2:0)])})}}}
+{const _st=step;step=function(dt){const r=_st(dt);try{gbStep(dt)}catch(err){console.warn('gmbots',err)}return r}}
+/* bots take damage from monsters (before net routing) */
+{const _ad=applyDamage;applyDamage=function(t,dmg,src,crit,kind){if(t&&t.gb){if(t.dead||t.remote)return;t.hp-=dmg;t.anim.hit=.18;if(gbNear(t))emit('dmg',{t,dmg:Math.round(dmg),crit,src,kind});
+  if(t.hp<=0){t.hp=0;t.dead=true;t.deadT=0;t.path=[];t.t=null;for(const m of W.ents)if(m.target===t){m.target=null;m.state='return'}}return}return _ad(t,dmg,src,crit,kind)}}
+{const _dv=derive;derive=function(e){if(e&&e.gb)return e.remote?{def:5,flee:5,maxHp:100,mdef:0,hit:0,crit:0,atkMin:1,atkMax:1,speed:150,range:40,delay:1,S:{vit:1,int:1},expMul:1}:gbStats(e);return _dv(e)}}
+/* remote: other players see the GM's bots */
+const RGB=new Map();
+NET_H.push(p=>{if(p.t!=='gbp'&&p.t!=='gbi'&&p.t!=='gbc')return false;if(!W||!W.P)return true;const now=performance.now();
+  if(p.t==='gbi'){for(const [id,n,lv,job,look] of p.b||[]){const k=p.k+':'+id;let e=RGB.get(k);if(!e){e={kind:'rp',gb:1,remote:1,id:'rgb_'+k,key:k,x:-1e4,y:-1e4,tx:null,ty:null,r:14,ang:0,anim:{atk:0,hit:0,walk:0,t:Math.random()},buffs:{},dead:false,face:1};RGB.set(k,e)}
+    e.name=String(n).slice(0,24);e.lv=lv|0;e.job=String(job).slice(0,24);e.look=look||e.look;e.pt=now}return true}
+  if(p.t==='gbc'){const e=RGB.get(p.k+':'+p.i);if(e)e.bubble={s:String(p.s).slice(0,40),t:5};return true}
+  for(const [id,x,y,a,f] of p.b||[]){const e=RGB.get(p.k+':'+id);if(!e||!e.look)continue;if(e.tx==null||Math.hypot(x-e.x,y-e.y)>700){e.x=x;e.y=y}e.tx=x;e.ty=y;e.ang=a;e.dead=!!(f&2);if(f&1)e.anim.atk=.28;e.pt=now}return true});
+function rgbTick(dt){const now=performance.now();for(const [k,e] of RGB){if(now-(e.pt||0)>8000||!NET.mc){RGB.delete(k);continue}if(e.tx==null)continue;const dx=e.tx-e.x,dy=e.ty-e.y,d=Math.hypot(dx,dy);if(d>1){const q=Math.min(1,dt*7);e.x+=dx*q;e.y+=dy*q;if(d>6)e.anim.walk=.12}
+  e.anim.t+=dt;e.anim.atk=Math.max(0,e.anim.atk-dt);e.anim.walk=Math.max(0,e.anim.walk-dt);if(e.bubble){e.bubble.t-=dt;if(e.bubble.t<=0)e.bubble=null}}}
+{const _jm=netJoinMap;netJoinMap=function(){RGB.clear();GB.infoT=0;return _jm()}}
+function gbAllVis(){const L=[];for(const e of GB.ents)L.push(e);for(const e of RGB.values())if(e.tx!=null)L.push(e);return L}
+/* render: sync before the original so FRAME-seen keeps the meshes */
+{const _sa=syncAll;syncAll=function(dt,T){try{rgbTick(dt);const P=W.P;if(!GB.hide)for(const e of gbAllVis())if(Math.abs(e.x-P.x)<2300&&Math.abs(e.y-P.y)<1840)syncEnt(e,dt,T)}catch(err){console.warn(err)}return _sa(dt,T)}}
+{const _do=drawOverlay;drawOverlay=function(dt,T){_do(dt,T);for(const e of gbAllVis()){const a=scr(e.x,e.y,0);if(!onScr(a))continue;label(a[0],a[1]+24,'Lv'+(e.lv|0)+' '+e.name,'#9ad8ff',12);label(a[0],a[1]+38,(e.job||'')+' · บอท','#7aa8c8',10.5);
+  if(!e.remote&&e.hp!=null&&e.hp<gbStats(e).maxHp&&!e.dead)bar(a[0],a[1]+8,36,e.hp/gbStats(e).maxHp,'#4ade80');if(e.dead){const b=scr(e.x,e.y,2);label(b[0],b[1],'สลบ','#ff9a8a',11)}
+  if(e.bubble){const b=scr(e.x,e.y,(e.hH||3.4)+1.4);if(onScr(b))label(b[0],b[1],e.bubble.s,'#fffbe8',12.5,true)}}}}
+/* ===== GM panel tab ===== */
+function gbPanelHTML(){const D=gbData(),here=GB.ents,per={};for(const b of D)per[b.map]=(per[b.map]||0)+1;const S=GB.sel;
+  let h='<div class="detail" style="margin-top:8px"><b>บอททดสอบ '+D.length+'/'+GB_MAX+'</b><p class="muted" style="font-size:11.5px;margin:2px 0 6px">บอทจะรับเควสล่ามอนตามเลเวล วิ่งตี เก็บเลเวล ส่งเควส เกิดใหม่เมื่อตาย · ทำงานบนเครื่อง GM ขณะ GM อยู่ในแมพเดียวกับบอท · ผู้เล่นอื่นในแมพจะเห็นบอท (มีป้าย "บอท")</p>';
+  h+='<div class="g2"><label style="margin:0">จำนวน<input id="gbN" type="number" min="1" max="'+(GB_MAX-D.length)+'" value="'+Math.min(S.n,Math.max(1,GB_MAX-D.length))+'"></label><label style="margin:0">เลเวล (0 = ตามแมพ)<input id="gbLv" type="number" min="0" max="150" value="'+S.lv+'"></label></div>';
+  h+='<label>อาชีพ</label><div class="gmchips">'+[['rand','🎲 คละทุกอาชีพ']].concat(Object.keys(GBJ).map(j=>[j,JOBDEF[j].n])).map(([k,l])=>'<button type="button" class="btn sm '+(S.job===k?'':'ghost')+'" data-gbj="'+k+'">'+l+'</button>').join('')+'</div>';
+  h+='<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm" type="button" data-gb="make"'+(D.length>=GB_MAX||!gbMapOK()?' disabled':'')+'>➕ สร้างบอทในแมพนี้</button><button class="btn sm ghost" type="button" data-gb="pause">'+(GB.pause?'▶ ให้บอททำงานต่อ':'⏸ หยุดบอทชั่วคราว')+'</button><button class="btn sm ghost" type="button" data-gb="share">'+(GB.share?'👁 ผู้เล่นอื่นเห็น: เปิด':'👁 ผู้เล่นอื่นเห็น: ปิด')+'</button>'+
+    '<button class="btn sm ghost" type="button" data-gb="move">📍 ย้ายบอททุกตัวมาแมพนี้</button><button class="btn sm ghost" type="button" data-gb="delhere">🗑 ลบบอทในแมพนี้</button><button class="btn sm ghost" type="button" data-gb="delall">'+(confirmKey==='gbdel'?'ยืนยันลบทั้งหมด':'🗑 ลบทั้งหมด')+'</button></div>';
+  h+='<p class="muted" style="font-size:11.5px;margin:8px 0 4px">'+(Object.keys(per).length?Object.entries(per).map(([m,n])=>(MAPS[m]?MAPS[m].n:m)+' '+n+' ตัว').join(' · '):'ยังไม่มีบอท')+'</p>';
+  if(here.length){h+='<div class="list" style="max-height:260px;overflow:auto">'+here.map((e,i)=>{const b=e.b,q=b.q;return '<div class="li" style="grid-template-columns:1fr auto"><div><b>'+esc(b.n)+'</b> <span class="muted">Lv'+b.lv+' '+esc(e.job)+'</span><small>'+(e.dead?'สลบ':e.st==='rest'?'พักฟื้น':e.st==='turnin'?'กำลังส่งเควส':'ล่ามอน')+' · เควส '+(q&&MONS[q.mid]?MONS[q.mid].n+' '+q.c+'/'+q.n:'-')+' · ส่งแล้ว '+b.qd+' · ฆ่า '+b.kills+'</small></div><div class="row"><button class="btn sm ghost" type="button" data-gbgo="'+i+'">ไปหา</button><button class="btn sm ghost" type="button" data-gbdel="'+b.id+'">ลบ</button></div></div>'}).join('')+'</div>'}
+  return h+'</div>'}
+{const _ra=rAdmin;rAdmin=function(){_ra();try{const box=$('wAdminB').querySelector('.adm');if(!box||!gbCanUse())return;const tabs=box.querySelector('.gtabs');if(!tabs)return;
+  if(!tabs.querySelector('[data-at="gbots"]')){const b=document.createElement('button');b.type='button';b.className='btn sm '+(ADM.tab==='gbots'?'':'ghost');b.dataset.at='gbots';b.textContent='🤖 บอททดสอบ';tabs.appendChild(b)}
+  if(ADM.tab==='gbots'){while(tabs.nextSibling)tabs.nextSibling.remove();const d=document.createElement('div');d.innerHTML=gbPanelHTML();box.appendChild(d)}}catch(err){console.warn(err)}}}
+function gbReadSel(){const n=$('gbN'),l=$('gbLv');if(n)GB.sel.n=Math.max(1,Math.min(GB_MAX,Math.floor(+n.value||1)));if(l)GB.sel.lv=Math.max(0,Math.min(150,Math.floor(+l.value||0)))}
+$('wAdminB').addEventListener('click',e=>{const t=e.target.closest('[data-gb],[data-gbj],[data-gbgo],[data-gbdel]');if(!t||!gbCanUse())return;e.stopImmediatePropagation();const d=t.dataset;gbReadSel();
+  if(d.gbj){GB.sel.job=d.gbj}
+  else if(d.gbgo!=null){const x=GB.ents[+d.gbgo];if(x){W.P.x=x.x+30;W.P.y=x.y+20;W.P.path=[];W.P.act=null;camSnap();closeWin('wAdmin')}return}
+  else if(d.gbdel){const D=gbData(),i=D.findIndex(b=>b.id===d.gbdel);if(i>=0)D.splice(i,1);saveAll();gbSync(true)}
+  else if(d.gb==='make'){gbCreate(GB.sel.n,GB.sel.job,GB.sel.lv)}
+  else if(d.gb==='pause'){GB.pause=!GB.pause}
+  else if(d.gb==='share'){GB.share=!GB.share;if(!GB.share)RGB.clear()}
+  else if(d.gb==='move'){for(const b of gbData()){if(b.map!==W.mapId){b.map=W.mapId;b.q=null}}saveAll();gbSync(true);toast('ย้ายบอททั้งหมดมาที่ '+netMapName())}
+  else if(d.gb==='delhere'){ACC.gmbots=gbData().filter(b=>b.map!==W.mapId);saveAll();gbSync(true)}
+  else if(d.gb==='delall'){if(confirmKey!=='gbdel'){confirmKey='gbdel';rAdmin();return}confirmKey=null;ACC.gmbots=[];saveAll();gbSync(true);toast('ลบบอททั้งหมดแล้ว')}
+  rAdmin()},true);
+$('wAdminB').addEventListener('change',e=>{if(e.target.id==='gbN'||e.target.id==='gbLv')gbReadSel()});
 
 authBoot();
 
